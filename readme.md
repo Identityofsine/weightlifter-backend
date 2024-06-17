@@ -17,7 +17,7 @@ The backend will also provide a private website that will allow the gym owner to
 
 
 ```diff
-- WARNING: This project is still in development and is not ready for production use.
+- NOTE: Please modify the database.sql file to include your own database credentials. As of now, the database credentials are set to the default values of weightlifter@weightlifter...
 ```
 
 To install the backend, you will need to have Docker installed on your machine. Once you have Docker installed, you can run the following command to start the backend:
