@@ -9,20 +9,20 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - .:/usr/src/app
+      - ./:/usr/src/app
     environment:
       - NODE_ENV=development
       - PORT=3000
-    command: nodemon src/index.ts 
+    command: nodemon -L src/index.ts 
     depends_on:
       - db
   db:
-    container_name: coinbank-api-db
+    container_name: weightlifter-api-db
     image: mysql:5.7.24
     restart: always
     tty: true
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - ./data/sql:/var/lib/mysql
       - ./database.sql:/docker-entrypoint-initdb.d/init.sql

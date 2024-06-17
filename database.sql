@@ -40,12 +40,12 @@ CREATE TABLE `exercise` (
 CREATE TABLE `user_workout_history` (
 	`uwh_id` integer PRIMARY KEY NOT NULL AUTO_INCREMENT,
 	`user_id` integer NOT NULL,
-	`workout_id` integer NOT NULL,
+	`workout_id` integer NOT NULL
 );
 
 CREATE TABLE `past_workouts` (
 	`pw_id` integer PRIMARY KEY NOT NULL AUTO_INCREMENT,
-	`workout_id` integer NOT NULL,
+	`workout_id` integer NOT NULL UNIQUE,
 	`finished` datetime,
 	`duration` integer
 );
@@ -77,6 +77,7 @@ CREATE TABLE `measurements` (
 	`right_quad` float NOT NULL,
 	`date` datetime NOT NULL
 );
+
 
 ALTER TABLE `workout_bridge` ADD FOREIGN KEY (`workout_id`) REFERENCES `workout`(`workout_id`);
 ALTER TABLE `workout_bridge` ADD FOREIGN KEY (`exercise_id`) REFERENCES `exercise`(`exercise_id`);
