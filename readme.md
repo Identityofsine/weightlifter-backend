@@ -1,5 +1,10 @@
 # Weightlifter 
 
+
+```diff
+- WARNING: This project is still in development and is not ready for production use.
+```
+
 ## Introduction
 
 Weightlifter as a whole, is a intergraded system that allows users to track their workouts and progress; the [Frontend](https://github.com/identityofsine/weightlifter) is a Electron Application that behaves similar to kiosk software. The Frontend will provide an interface for users to interact with the system. The expected system is a old, low-preforming computer that is connected to a off-brand touch screen display. This touch-screen display is mounted in the bottom-right corner of a large mirror. 
@@ -9,6 +14,11 @@ The backend is a RESTful API that handles the logic of the system, such as Datab
 The backend will also provide a private website that will allow the gym owner to manage the system and allow users to sign up for the system. The website will be built using React.js and will be hosted on the same server as the backend (only accessible through a private tunnel). 
 
 ## Installation
+
+
+```diff
+- WARNING: This project is still in development and is not ready for production use.
+```
 
 To install the backend, you will need to have Docker installed on your machine. Once you have Docker installed, you can run the following command to start the backend:
 
