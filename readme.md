@@ -29,10 +29,10 @@ This will start the backend on port 3000, you can then access the API by going t
 
 The database schema is defined in the `database.sql` file in this repository. For a abstract and detailed view of the schema, please refer to the screenshot below.
 
-![Database Schema](./database_schema.png)
+![Database Schema](./assets/database_schema.png)
 
 ## API Endpoints
 
 The API endpoints are defined in the `api_endpoints.md` file in this repository. For a detailed view of the endpoints, please refer to the screenshot below.
 
-![API Endpoints](./api_endpoints.png)
+![API Endpoints](./assets/api_endpoints.png)
