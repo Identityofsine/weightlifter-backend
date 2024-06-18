@@ -1,5 +1,5 @@
 import mysql from 'mysql2';
-import { DatabaseError } from './database.error.ts';
+import { DatabaseError } from './database.error';
 
 export default class Database {
 	private static instance: Database;

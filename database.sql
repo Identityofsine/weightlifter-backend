@@ -19,6 +19,14 @@ CREATE TABLE `workout` (
   `workout_id` integer PRIMARY KEY NOT NULL
 );
 
+CREATE TABLE `user_auth` (
+	`user_auth_id` integer PRIMARY KEY NOT NULL AUTO_INCREMENT,
+	`user_id` integer NOT NULL,
+	`auth_token` VARCHAR(225) NOT NULL,
+	`refresh_token` VARCHAR(225) NOT NULL,
+	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE `workout_bridge` (
   `workout_bridge_id` integer PRIMARY KEY NOT NULL,
 	`workout_id` integer NOT NULL,
@@ -92,4 +100,7 @@ ALTER TABLE `past_exercise` ADD FOREIGN KEY (`workout_id`) REFERENCES `past_work
 ALTER TABLE `past_exercise` ADD FOREIGN KEY (`exercise_id`) REFERENCES `exercise`(`exercise_id`);
 
 ALTER TABLE `measurements` ADD FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`);
+
+ALTER TABLE `user_auth` ADD FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`);
+
 

@@ -1,8 +1,19 @@
 import express from 'express';
+import { WeightLifterSettings } from './settings';
+import bodyParser from 'body-parser';
+import database from './db/database';
+
 
 const app = express();
+app.use(express.json());
+app.use(bodyParser.json());
+const db = database.getInstance();
 
-app.listen(3000, () => {
-	//booboo
-	console.log('Server is running on port 3000');
+
+app.get('/', (_req, res) => {
+	res.send('Weightlifter app');
+});
+
+app.listen(WeightLifterSettings.server.port, () => {
+	console.log('Server started on port ' + WeightLifterSettings.server.port);
 });
