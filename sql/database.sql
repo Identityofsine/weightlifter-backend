@@ -7,16 +7,16 @@ FLUSH PRIVILEGES;
 USE weightlifter;
 
 CREATE TABLE `user` (
-  `user_id` integer PRIMARY KEY NOT NULL, 
+  `user_id` integer PRIMARY KEY NOT NULL AUTO_INCREMENT, 
   `username` VARCHAR(40) NOT NULL UNIQUE,
   `password` VARCHAR(225) NOT NULL,
-	`nfc_key` VARCHAR(225) NOT NULL,
+	`nfc_key` VARCHAR(225) NOT NULL DEFAULT "",
 	`permission` INTEGER NOT NULL DEFAULT 0, -- 0 = user, 1 = workout_mutate, 2 = admin, 4 = root
 	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE `workout` (
-  `workout_id` integer PRIMARY KEY NOT NULL
+  `workout_id` integer PRIMARY KEY NOT NULL AUTO_INCREMENT
 );
 
 CREATE TABLE `user_auth` (
@@ -28,7 +28,7 @@ CREATE TABLE `user_auth` (
 );
 
 CREATE TABLE `workout_bridge` (
-  `workout_bridge_id` integer PRIMARY KEY NOT NULL,
+  `workout_bridge_id` integer PRIMARY KEY NOT NULL AUTO_INCREMENT,
 	`workout_id` integer NOT NULL,
 	`exercise_id` integer NOT NULL,
 	`sets` integer NOT NULL,

@@ -5,6 +5,12 @@ export class DatabaseError extends Error {
 	}
 }
 
+export class DatabaseIOError extends DatabaseError {
+	constructor(message: string, source: string) {
+		super(400, message, source);
+	}
+}
+
 export class AlreadyExistsError extends DatabaseError {
 	constructor(message: string, source: string) {
 		super(409, message, source);

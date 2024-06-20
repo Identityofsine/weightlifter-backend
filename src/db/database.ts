@@ -1,5 +1,5 @@
 import mysql from 'mysql2';
-import { AlreadyExistsError, AuthenticationError, DatabaseError, NotFoundError } from './database.error';
+import { AlreadyExistsError, AuthenticationError, DatabaseError, DatabaseIOError, NotFoundError } from './database.error';
 import { DatabaseTypes } from './database.types';
 import nfc_hash from '../nfc';
 
@@ -18,7 +18,7 @@ export default class Database {
 			console.log('Connected to database!');
 		});
 		this.connection.on('error', (_err) => {
-			console.log('Error in database connection');
+			console.log('Error in database connection: ' + _err);
 		});
 	}
 
@@ -39,7 +39,6 @@ export default class Database {
 		const response = await new Promise((resolve, reject) => {
 			this.connection.getConnection((err, con) => {
 				if (err || !con) {
-					console.log('Error in connection');
 					reject(new DatabaseError(500, 'Error in connection [' + err?.errno + ']', 'database.ts::query'));
 					return;
 				} else {
@@ -47,7 +46,7 @@ export default class Database {
 					query = con.escape(query);
 					con.query(query, (err, results, fields) => {
 						if (err) {
-							console.log('Error in query');
+							console.log('Error in query::' + err);
 							con.release();
 							reject(err);
 						}
@@ -68,11 +67,11 @@ export default class Database {
 
 	public async setUserNFC(username: string, nfc: string): Promise<boolean> {
 		try {
-			const user_exists = await this.atleastOne(`SELECT * FROM users WHERE username = '${username}'`);
+			const user_exists = await this.atleastOne(`SELECT * FROM user WHERE username = '${username}'`);
 			if (!user_exists) {
 				throw new NotFoundError('User not found', 'database.ts::setUserNFC');
 			}
-			await this.query(`UPDATE users SET nfc = '${nfc}' WHERE username = '${username}'`);
+			await this.query(`UPDATE user SET nfc = '${nfc}' WHERE username = '${username}'`);
 			return true;
 		}
 		catch (err: any) {
@@ -85,16 +84,16 @@ export default class Database {
 
 	public async addUser(username: string, password: string): Promise<boolean> {
 		try {
-			const user_exists = await this.atleastOne(`SELECT * FROM users WHERE username = '${username}'`);
+			const user_exists = await this.atleastOne(`SELECT * FROM user WHERE username = '${username}'`);
 			if (user_exists) {
 				throw new AlreadyExistsError('User already exists', 'database.ts::addUser');
 			}
-			await this.query(`INSERT INTO users (username, password) VALUES ('${username}', '${password}')`);
+			await this.query(`INSERT INTO user (username, password) VALUES ('${username}', '${password}')`);
 			await this.setUserNFC(username, nfc_hash());
 			return true;
 		}
 		catch (err: any) {
-			if (err instanceof AlreadyExistsError) {
+			if (err instanceof DatabaseError) {
 				throw err;
 			}
 			return false;
@@ -103,11 +102,11 @@ export default class Database {
 
 	public async getUser(username: string): Promise<DatabaseTypes.User> {
 		try {
-			const user_exists = await this.atleastOne(`SELECT * FROM users WHERE username = '${username}'`);
+			const user_exists = await this.atleastOne(`SELECT * FROM user WHERE username = '${username}'`);
 			if (!user_exists) {
 				throw new NotFoundError('User not found', 'database.ts::getUser');
 			}
-			const user = await this.query<DatabaseTypes.User[]>(`SELECT * FROM users WHERE username = '${username}'`);
+			const user = await this.query<DatabaseTypes.User[]>(`SELECT * FROM user WHERE username = '${username}'`);
 			return user[0];
 		}
 		catch (err: any) {
@@ -119,19 +118,22 @@ export default class Database {
 	}
 
 	public async getUserById(user_id: number): Promise<DatabaseTypes.User> {
+		if (!user_id || user_id < 0) {
+			throw new DatabaseIOError('Invalid user_id', 'database.ts::getUserById');
+		}
 		try {
-			const user_exists = await this.atleastOne(`SELECT * FROM users WHERE user_id = '${user_id}'`);
+			const user_exists = await this.atleastOne(`SELECT * FROM user WHERE user_id = '${user_id}'`);
 			if (!user_exists) {
 				throw new NotFoundError('User not found', 'database.ts::getUserById');
 			}
-			const user = await this.query<DatabaseTypes.User[]>(`SELECT * FROM users WHERE user_id = '${user_id}'`);
+			const user = await this.query<DatabaseTypes.User[]>(`SELECT * FROM user WHERE user_id = '${user_id}'`);
 			if (!user || user.length === 0) {
 				throw new NotFoundError('User not found', 'database.ts::getUserById');
 			}
 			return user?.[0];
 		}
 		catch (err: any) {
-			if (err instanceof NotFoundError) {
+			if (err instanceof DatabaseError) {
 				throw err;
 			}
 			return { user_id: -1, username: '', password: '', nfc_key: '', permission: 0 };
@@ -140,7 +142,7 @@ export default class Database {
 
 	public async authenticateUser(username: string, token?: string, nfc?: string): Promise<boolean> {
 		try {
-			const user_exists = await this.atleastOne(`SELECT * FROM users WHERE username = '${username}'`);
+			const user_exists = await this.atleastOne(`SELECT * FROM user WHERE username = '${username}'`);
 			if (!user_exists) {
 				throw new NotFoundError('User not found', 'database.ts::authenticateUser');
 			}
@@ -166,7 +168,7 @@ export default class Database {
 
 	public async logUserIn(username: string, password?: string, nfc?: string): Promise<DatabaseTypes.UserToken> {
 		try {
-			const user_exists = await this.atleastOne(`SELECT * FROM users WHERE username = '${username}'`);
+			const user_exists = await this.atleastOne(`SELECT * FROM user WHERE username = '${username}'`);
 			if (!user_exists) {
 				throw new NotFoundError('User not found', 'database.ts::authenticateUser');
 			}
