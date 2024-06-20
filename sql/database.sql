@@ -17,7 +17,7 @@ CREATE TABLE `user` (
 
 CREATE TABLE `workout` (
   `workout_id` integer PRIMARY KEY NOT NULL AUTO_INCREMENT
-	`name` VARCHAR(255) NOT NULL,
+	`name` VARCHAR(255) NOT NULL UNIQUE,
 );
 
 CREATE TABLE `user_auth` (

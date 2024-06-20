@@ -61,7 +61,7 @@ export default class Database {
 						if (err) {
 							console.log('Error in query::' + err);
 							con.release();
-							reject(err);
+							reject(new DatabaseError(500, 'Error in query [' + err.errno + ']', 'database.ts::query'));
 						} else {
 							console.log('[database.ts::query] Query successful');
 							con.release();
@@ -257,15 +257,23 @@ export default class Database {
 	public async addWorkout(workout: Omit<Omit<DatabaseTypes.Workout, 'workout_id'>, 'exercises'> & { exercises: RouteTypes.WorkoutExerciseInput[] }): Promise<DatabaseTypes.Workout> {
 		try {
 			const name = await this.escape(workout.name) as string;
-			const exercises = workout.exercises;
+			const exercises = workout.exercises ?? [];
+
+			//check if workout exists
 			const workout_exists = await this.atleastOne(`SELECT * FROM workout WHERE name = ${name}`);
 			if (workout_exists) {
 				throw new AlreadyExistsError('Workout already exists', 'database.ts::addWorkout');
 			}
+
+			//add workout
+			await this.query<DatabaseTypes.Workout[]>(`INSERT INTO workout (name) VALUES (${name})`);
+
+			//check if added
 			const new_workout = await this.query<DatabaseTypes.Workout[]>(`SELECT * FROM workout WHERE name = ${name}`);
 			if (new_workout.length === 0) {
 				throw new DatabaseError(500, 'Error adding workout', 'database.ts::addWorkout');
 			}
+
 			await this.addExerciseToWorkout(new_workout[0].workout_id, exercises);
 			return this.getWorkout(new_workout[0].workout_id);
 		} catch (err: any) {
@@ -288,7 +296,7 @@ export default class Database {
 			}
 
 			//get previous order
-			const order = ((await this.query<number[]>(`SELECT MAX(order) FROM workout_bridge WHERE workout_id = '${workout_id}'`))?.[0] + 1) ?? 0;
+			const order = ((await this.query<number[]>(`SELECT MAX('order') FROM workout_bridge WHERE workout_id = ${workout_id}`))?.[0] + 1) ?? 0;
 
 			for (let i = 0; i < exercises.length; i++) {
 				try {
@@ -342,7 +350,7 @@ export default class Database {
 			if (e instanceof DatabaseError) {
 				throw e;
 			}
-			return { exercise_id: -1, name: '', description: '', sets: 0, reps: 0, time_based: false };
+			return { exercise_id: -1, name: '', description: '', sets: 0, reps: 0, time_flag: false };
 		}
 	}
 
@@ -351,12 +359,12 @@ export default class Database {
 		try {
 			const name = await this.escape(exercise.name) as string;
 			const description = await this.escape(exercise.description) as string;
-			const { sets, reps, time_based } = exercise;
+			const { sets, reps, time_flag } = exercise;
 			const exercise_exists = await this.atleastOne(`SELECT * FROM exercise WHERE name = ${name}`);
 			if (exercise_exists) {
 				throw new AlreadyExistsError('Exercise already exists - Pick a different name.', 'database.ts::createExercise');
 			}
-			await this.query<DatabaseTypes.Exercise[]>(`INSERT INTO exercise (name, description, time_based) VALUES (${name}, ${description}, ${time_based})`);
+			await this.query<DatabaseTypes.Exercise[]>(`INSERT INTO exercise (name, description, time_flag) VALUES (${name}, ${description}, ${time_flag ? 1 : 0})`);
 			const new_exercise = await this.query<DatabaseTypes.Exercise[]>(`SELECT * FROM exercise WHERE name = ${name}`);
 			if (new_exercise.length === 0) {
 				throw new DatabaseError(500, 'Error adding exercise', 'database.ts::createExercise');
@@ -366,7 +374,7 @@ export default class Database {
 			if (err instanceof DatabaseError) {
 				throw err;
 			}
-			return { exercise_id: -1, name: '', description: '', sets: 0, reps: 0, time_based: false };
+			return { exercise_id: -1, name: '', description: '', sets: 0, reps: 0, time_flag: false };
 		}
 	}
 }

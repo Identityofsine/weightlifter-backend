@@ -18,6 +18,9 @@ export namespace WorkoutController {
 			if (!response) {
 				throw new RouteError(500, 'Error adding workout', 'workout.controller.ts::addWorkout');
 			}
+			if (response!.workout_id === -1) {
+				throw new RouteError(500, 'Something went wrong!', 'workout.controller.ts::addWorkout');
+			}
 			return res.status(200).json({ status: 200, message: 'Workout added successfully', success: true, workout: response });
 		}
 		catch (err: any) {
@@ -32,9 +35,12 @@ export namespace WorkoutController {
 				throw new RouteIOError('Workout name not provided', 'workout.controller.ts::addWorkout');
 			}
 			// add workout to the database
-			const response = await db.createExercise({ name, description, time_based: time_flag });
+			const response = await db.createExercise({ name, description, time_flag: time_flag });
 			if (!response) {
 				throw new RouteError(500, 'Error adding exercise', 'workout.controller.ts::addWorkout');
+			}
+			if (response!.exercise_id === -1) {
+				throw new RouteError(400, 'Exercise already exists', 'workout.controller.ts::addWorkout');
 			}
 			return res.status(200).json({ status: 200, message: 'Exercise added successfully', success: true, exercise: response });
 		}

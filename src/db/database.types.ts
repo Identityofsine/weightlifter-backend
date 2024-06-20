@@ -19,7 +19,7 @@ export namespace DatabaseTypes {
 		description: string;
 		sets?: number;
 		reps?: number;
-		time_based?: boolean;
+		time_flag?: boolean;
 	}
 
 	export type Workout = {

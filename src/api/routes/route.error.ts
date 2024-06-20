@@ -25,6 +25,12 @@ export class RoutePermissionError extends RouteError {
 	}
 }
 
+export class RouteDatabaseBadReturn extends RouteError {
+	constructor(message: string, source: string) {
+		super(500, message, source);
+	}
+}
+
 export function returnError(res: Response, e: RouteError) {
-	return res.status(e.status).json({ status: e.status, message: e.message });
+	return res.status(e.status).json({ success: false, status: e.status, message: e.message });
 }
