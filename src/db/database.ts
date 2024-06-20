@@ -1,5 +1,6 @@
 import mysql from 'mysql2';
 import { AlreadyExistsError, AuthenticationError, DatabaseError, NotFoundError } from './database.error';
+import { DatabaseTypes } from './database.types';
 import nfc_hash from '../nfc';
 
 export default class Database {
@@ -117,7 +118,53 @@ export default class Database {
 		}
 	}
 
-	public async authenticateUser(username: string, password?: string, nfc?: string): Promise<DatabaseTypes.UserToken> {
+	public async getUserById(user_id: number): Promise<DatabaseTypes.User> {
+		try {
+			const user_exists = await this.atleastOne(`SELECT * FROM users WHERE user_id = '${user_id}'`);
+			if (!user_exists) {
+				throw new NotFoundError('User not found', 'database.ts::getUserById');
+			}
+			const user = await this.query<DatabaseTypes.User[]>(`SELECT * FROM users WHERE user_id = '${user_id}'`);
+			if (!user || user.length === 0) {
+				throw new NotFoundError('User not found', 'database.ts::getUserById');
+			}
+			return user?.[0];
+		}
+		catch (err: any) {
+			if (err instanceof NotFoundError) {
+				throw err;
+			}
+			return { user_id: -1, username: '', password: '', nfc_key: '', permission: 0 };
+		}
+	}
+
+	public async authenticateUser(username: string, token?: string, nfc?: string): Promise<boolean> {
+		try {
+			const user_exists = await this.atleastOne(`SELECT * FROM users WHERE username = '${username}'`);
+			if (!user_exists) {
+				throw new NotFoundError('User not found', 'database.ts::authenticateUser');
+			}
+			const user = await this.getUser(username);
+			if (token && nfc) {
+				throw new DatabaseError(400, 'Cannot authenticate with both token and nfc', 'database.ts::authenticateUser');
+			}
+			if (token) {
+				if (user.nfc_key !== token) {
+					throw new AuthenticationError('Incorrect token', 'database.ts::authenticateUser');
+				}
+			} else if (nfc) {
+				if (user.nfc_key !== nfc) {
+					throw new AuthenticationError('Incorrect nfc', 'database.ts::authenticateUser');
+				}
+			}
+			return true;
+		} catch (err: any) {
+
+			return false;
+		}
+	}
+
+	public async logUserIn(username: string, password?: string, nfc?: string): Promise<DatabaseTypes.UserToken> {
 		try {
 			const user_exists = await this.atleastOne(`SELECT * FROM users WHERE username = '${username}'`);
 			if (!user_exists) {

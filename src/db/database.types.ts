@@ -1,4 +1,4 @@
-namespace DatabaseTypes {
+export namespace DatabaseTypes {
 	export type User = {
 		user_id: number;
 		username: string;

@@ -11,7 +11,7 @@ CREATE TABLE `user` (
   `username` VARCHAR(40) NOT NULL UNIQUE,
   `password` VARCHAR(225) NOT NULL,
 	`nfc_key` VARCHAR(225) NOT NULL,
-	`permission` INTEGER NOT NULL DEFAULT 0, -- 0 = user, 1 = workout_mutate, 2 = admin 
+	`permission` INTEGER NOT NULL DEFAULT 0, -- 0 = user, 1 = workout_mutate, 2 = admin, 4 = root
 	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP
 );
 
