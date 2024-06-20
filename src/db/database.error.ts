@@ -5,6 +5,18 @@ export class DatabaseError extends Error {
 	}
 }
 
+export class AlreadyExistsError extends DatabaseError {
+	constructor(message: string, source: string) {
+		super(409, message, source);
+	}
+}
+
+export class NotFoundError extends DatabaseError {
+	constructor(message: string, source: string) {
+		super(404, message, source);
+	}
+}
+
 export class AuthenticationError extends DatabaseError {
 	constructor(message: string, source: string) {
 		super(401, message, source);

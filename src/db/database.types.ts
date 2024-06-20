@@ -7,6 +7,12 @@ namespace DatabaseTypes {
 		permission: number;
 	}
 
+	export type UserToken = {
+		user_id: number;
+		accesstoken: string;
+		refreshtoken: string;
+	}
+
 	export type Exercise = {
 		exercise_id: number;
 		name: string;
@@ -25,6 +31,9 @@ namespace DatabaseTypes {
 		measurement_id: number;
 		user_id: number;
 		date: string;
+	} & Measuresables
+
+	export type Measuresables = Partial<{
 		weight: number;
 		bodyfat: number;
 		neck: number;
@@ -38,6 +47,6 @@ namespace DatabaseTypes {
 		right_forearm: number;
 		left_quad: number;
 		right_quad: number;
-	}
+	}>
 
 }
