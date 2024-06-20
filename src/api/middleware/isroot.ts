@@ -1,4 +1,6 @@
 import Database from "../../db/database";
+import { DatabaseError } from "../../db/database.error";
+import { returnError } from "../routes/route.error";
 
 const db = Database.getInstance();
 
@@ -17,6 +19,8 @@ export const isRoot = async (req: any, res: any, next: any) => {
 		}
 
 	} catch (e: any) {
-		return res.status(500).json({ status: 500, message: `An error occurred: ${e.message}` });
+		if (e instanceof DatabaseError) {
+			returnError(res, e);
+		}
 	}
 }
