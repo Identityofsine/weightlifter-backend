@@ -82,11 +82,11 @@ export default class Database {
 		try {
 			username = await this.escape(username) as string;
 			nfc = await this.escape(nfc) as string;
-			const user_exists = await this.atleastOne(`SELECT * FROM user WHERE username = '${username}'`);
+			const user_exists = await this.atleastOne(`SELECT * FROM user WHERE username = ${username}`);
 			if (!user_exists) {
 				throw new NotFoundError('User not found', 'database.ts::setUserNFC');
 			}
-			await this.query(`UPDATE user SET nfc = '${nfc}' WHERE username = '${username}'`);
+			await this.query(`UPDATE user SET nfc = '${nfc}' WHERE username = ${username}`);
 			return true;
 		}
 		catch (err: any) {
@@ -97,7 +97,7 @@ export default class Database {
 		}
 	}
 
-	public async addUser(username: string, password: string): Promise<boolean> {
+	public async addUser(username: string, password: string): Promise<DatabaseTypes.User> {
 		try {
 			username = await this.escape(username) as string;
 			password = await this.escape(password) as string;
@@ -105,15 +105,15 @@ export default class Database {
 			if (user_exists) {
 				throw new AlreadyExistsError('User already exists', 'database.ts::addUser');
 			}
-			await this.query(`INSERT INTO user (username, password) VALUES (${username}, ${password})`);
+			const user = await this.query<DatabaseTypes.User[]>(`INSERT INTO user (username, password) VALUES (${username}, ${password})`);
 			await this.setUserNFC(username, nfc_hash());
-			return true;
+			return user?.[0];
 		}
 		catch (err: any) {
 			if (err instanceof DatabaseError) {
 				throw err;
 			}
-			return false;
+			return { user_id: -1, username: '', password: '', nfc_key: '', permission: 0 };
 		}
 	}
 
