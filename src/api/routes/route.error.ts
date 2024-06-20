@@ -13,6 +13,18 @@ export class RouteIOError extends RouteError {
 	}
 }
 
+export class RouteAuthenticationError extends RouteError {
+	constructor(message: string, source: string) {
+		super(401, message, source);
+	}
+}
+
+export class RoutePermissionError extends RouteError {
+	constructor(message: string, source: string) {
+		super(403, message, source);
+	}
+}
+
 export function returnError(res: Response, e: RouteError) {
 	return res.status(e.status).json({ status: e.status, message: e.message });
 }
