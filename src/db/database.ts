@@ -2,6 +2,7 @@ import mysql from 'mysql2';
 import { AlreadyExistsError, AuthenticationError, DatabaseError, DatabaseIOError, NotFoundError } from './database.error';
 import { DatabaseTypes } from './database.types';
 import nfc_hash from '../nfc';
+import { RouteTypes } from '../api/routes/route.types';
 
 export default class Database {
 	private static instance: Database;
@@ -226,6 +227,9 @@ export default class Database {
 		}
 	}
 
+	/* BLOCK: WORKOUT & EXERCISE LOGIC */
+
+	//get a workout from the database
 	public async getWorkout(workout_id: number): Promise<DatabaseTypes.Workout> {
 		try {
 			if (!workout_id || workout_id < 0) {
@@ -239,7 +243,8 @@ export default class Database {
 			if (workout.length === 0) {
 				throw new NotFoundError('Workout not found', 'database.ts::getWorkout');
 			}
-			return workout?.[0];
+			const exercies = await this.getExercisesByWorkout(workout_id) ?? [];
+			return { ...workout[0], exercises: exercies };
 		} catch (e: any) {
 			if (e instanceof DatabaseError) {
 				throw e;
@@ -248,8 +253,8 @@ export default class Database {
 		}
 	}
 
-	//workout stuff
-	public async addWorkout(workout: Omit<DatabaseTypes.Workout, 'workout_id'>): Promise<DatabaseTypes.Workout> {
+	//add a workout into the database, using existing exercises.
+	public async addWorkout(workout: Omit<Omit<DatabaseTypes.Workout, 'workout_id'>, 'exercises'> & { exercises: RouteTypes.WorkoutExerciseInput[] }): Promise<DatabaseTypes.Workout> {
 		try {
 			const name = await this.escape(workout.name) as string;
 			const exercises = workout.exercises;
@@ -261,15 +266,107 @@ export default class Database {
 			if (new_workout.length === 0) {
 				throw new DatabaseError(500, 'Error adding workout', 'database.ts::addWorkout');
 			}
-			return new_workout[0];
+			await this.addExerciseToWorkout(new_workout[0].workout_id, exercises);
+			return this.getWorkout(new_workout[0].workout_id);
 		} catch (err: any) {
 			if (err instanceof DatabaseError) {
 				throw err;
 			}
 			return { workout_id: -1, name: '', exercises: [] };
 		}
+	}
+
+	//exercise and workout stuff
+	public async addExerciseToWorkout(workout_id: number, exercises: RouteTypes.WorkoutExerciseInput[]): Promise<DatabaseTypes.Workout> {
+		try {
+			if (!workout_id || workout_id < 0 || !exercises) {
+				throw new DatabaseIOError('Invalid workout_id or exercise list', 'database.ts::addExerciseToWorkout');
+			}
+			const workout_exists = await this.atleastOne(`SELECT * FROM workout WHERE workout_id = '${workout_id}'`);
+			if (!workout_exists) {
+				throw new NotFoundError('Workout not found', 'database.ts::addExerciseToWorkout');
+			}
+
+			//get previous order
+			const order = ((await this.query<number[]>(`SELECT MAX(order) FROM workout_bridge WHERE workout_id = '${workout_id}'`))?.[0] + 1) ?? 0;
+
+			for (let i = 0; i < exercises.length; i++) {
+				try {
+					const exercise = await this.getExercise(exercises[i].id);
+					const sets = exercises[i].sets ?? 3;
+					const reps = exercises[i].reps ?? 12;
+					if (exercise.exercise_id < 0) {
+						throw new NotFoundError('Exercise not found', 'database.ts::addExerciseToWorkout');
+					}
+					await this.query(`INSERT INTO workout_bridge (workout_id, exercise_id, sets, reps, order) VALUES ('${workout_id}', '${exercise.exercise_id}', ${sets}, ${reps}, '${order + i}')`)
+				} catch (e: any) {
+					if (e instanceof NotFoundError) {
+						throw e;
+					}
+					continue;
+				}
+			}
+
+			return await this.getWorkout(workout_id);
+
+		} catch (e: any) {
+			if (e instanceof DatabaseError) {
+				throw e;
+			}
+			return { workout_id: -1, name: '', exercises: [] };
+		}
+	}
 
 
+	public async getExercisesByWorkout(workout_id: number): Promise<DatabaseTypes.Exercise[]> {
+		const exercises = await this.query<DatabaseTypes.Exercise[]>(`SELECT * FROM workout_bridge WHERE workout_id = '${workout_id}'`);
+		return exercises;
+	}
 
+	//exercise stuff
+	public async getExercise(exercise_id: number): Promise<DatabaseTypes.Exercise> {
+		try {
+			if (!exercise_id || exercise_id < 0) {
+				throw new DatabaseIOError('Invalid exercise_id', 'database.ts::getExercise');
+			}
+			const exercise_exists = await this.atleastOne(`SELECT * FROM exercise WHERE exercise_id = '${exercise_id}'`);
+			if (!exercise_exists) {
+				throw new NotFoundError('Exercise not found', 'database.ts::getExercise');
+			}
+			const exercise = await this.query<DatabaseTypes.Exercise[]>(`SELECT * FROM exercise WHERE exercise_id = '${exercise_id}'`);
+			if (exercise.length === 0) {
+				throw new NotFoundError('Exercise not found', 'database.ts::getExercise');
+			}
+			return exercise?.[0];
+		} catch (e: any) {
+			if (e instanceof DatabaseError) {
+				throw e;
+			}
+			return { exercise_id: -1, name: '', description: '', sets: 0, reps: 0, time_based: false };
+		}
+	}
+
+
+	public async createExercise(exercise: Omit<DatabaseTypes.Exercise, 'exercise_id'>): Promise<DatabaseTypes.Exercise> {
+		try {
+			const name = await this.escape(exercise.name) as string;
+			const description = await this.escape(exercise.description) as string;
+			const { sets, reps, time_based } = exercise;
+			const exercise_exists = await this.atleastOne(`SELECT * FROM exercise WHERE name = ${name}`);
+			if (exercise_exists) {
+				throw new AlreadyExistsError('Exercise already exists - Pick a different name.', 'database.ts::createExercise');
+			}
+			await this.query<DatabaseTypes.Exercise[]>(`INSERT INTO exercise (name, description, time_based) VALUES (${name}, ${description}, ${time_based})`);
+			const new_exercise = await this.query<DatabaseTypes.Exercise[]>(`SELECT * FROM exercise WHERE name = ${name}`);
+			if (new_exercise.length === 0) {
+				throw new DatabaseError(500, 'Error adding exercise', 'database.ts::createExercise');
+			}
+			return new_exercise[0];
+		} catch (err: any) {
+			if (err instanceof DatabaseError) {
+				throw err;
+			}
+			return { exercise_id: -1, name: '', description: '', sets: 0, reps: 0, time_based: false };
+		}
 	}
 }
