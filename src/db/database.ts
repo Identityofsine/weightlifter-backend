@@ -97,7 +97,7 @@ export default class Database {
 		}
 	}
 
-	public async addUser(username: string, password: string): Promise<DatabaseTypes.User> {
+	public async addUser(username: string, password: string, permission: number = 0): Promise<DatabaseTypes.User> {
 		try {
 			username = await this.escape(username) as string;
 			password = await this.escape(password) as string;
@@ -106,7 +106,7 @@ export default class Database {
 			if (user_exists) {
 				throw new AlreadyExistsError('User already exists', 'database.ts::addUser');
 			}
-			await this.query<DatabaseTypes.User[]>(`INSERT INTO user (username, password, nfc_key) VALUES (${username}, ${password}, ${nfc_key})`);
+			await this.query<DatabaseTypes.User[]>(`INSERT INTO user (username, password, nfc_key, permission) VALUES (${username}, ${password}, ${nfc_key}, ${permission})`);
 			const user = await this.query<DatabaseTypes.User[]>(`SELECT * FROM user WHERE username = ${username}`);
 			if (user.length === 0) {
 				throw new DatabaseError(500, 'Error adding user', 'database.ts::addUser');
@@ -224,5 +224,52 @@ export default class Database {
 			}
 			return { user_id: -1, accesstoken: '', refreshtoken: '' };
 		}
+	}
+
+	public async getWorkout(workout_id: number): Promise<DatabaseTypes.Workout> {
+		try {
+			if (!workout_id || workout_id < 0) {
+				throw new DatabaseIOError('Invalid workout_id', 'database.ts::getWorkout');
+			}
+			const workout_exists = await this.atleastOne(`SELECT * FROM workout WHERE workout_id = '${workout_id}'`);
+			if (!workout_exists) {
+				throw new NotFoundError('Workout not found', 'database.ts::getWorkout');
+			}
+			const workout = await this.query<DatabaseTypes.Workout[]>(`SELECT * FROM workout WHERE workout_id = '${workout_id}'`);
+			if (workout.length === 0) {
+				throw new NotFoundError('Workout not found', 'database.ts::getWorkout');
+			}
+			return workout?.[0];
+		} catch (e: any) {
+			if (e instanceof DatabaseError) {
+				throw e;
+			}
+			return { workout_id: -1, name: '', exercises: [] };
+		}
+	}
+
+	//workout stuff
+	public async addWorkout(workout: Omit<DatabaseTypes.Workout, 'workout_id'>): Promise<DatabaseTypes.Workout> {
+		try {
+			const name = await this.escape(workout.name) as string;
+			const exercises = workout.exercises;
+			const workout_exists = await this.atleastOne(`SELECT * FROM workout WHERE name = ${name}`);
+			if (workout_exists) {
+				throw new AlreadyExistsError('Workout already exists', 'database.ts::addWorkout');
+			}
+			const new_workout = await this.query<DatabaseTypes.Workout[]>(`SELECT * FROM workout WHERE name = ${name}`);
+			if (new_workout.length === 0) {
+				throw new DatabaseError(500, 'Error adding workout', 'database.ts::addWorkout');
+			}
+			return new_workout[0];
+		} catch (err: any) {
+			if (err instanceof DatabaseError) {
+				throw err;
+			}
+			return { workout_id: -1, name: '', exercises: [] };
+		}
+
+
+
 	}
 }

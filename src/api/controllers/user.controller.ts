@@ -7,12 +7,12 @@ const db = Database.getInstance();
 export namespace UserController {
 	export async function addUser(req: Request, res: Response) {
 		try {
-			const { username, password } = req.body;
+			const { username, password, permission } = req.body;
 			if (!username || !password) {
 				throw new RouteIOError('Username or password not provided', 'user.controller.ts::addUser');
 			}
 			// add user to the database
-			const response = await db.addUser(username, password);
+			const response = await db.addUser(username, password, permission ? permission : 0);
 			if (!response) {
 				throw new RouteError(500, 'Error adding user', 'user.controller.ts::addUser');
 			}

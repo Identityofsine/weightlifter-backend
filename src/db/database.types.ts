@@ -24,6 +24,7 @@ export namespace DatabaseTypes {
 
 	export type Workout = {
 		workout_id: number;
+		name: string;
 		exercises: Exercise[];
 	}
 
