@@ -16,7 +16,7 @@ export namespace UserController {
 			if (!response) {
 				throw new RouteError(500, 'Error adding user', 'user.controller.ts::addUser');
 			}
-			return res.status(200).json({ status: 200, message: 'User added successfully', response });
+			return res.status(200).json({ status: 200, message: 'User added successfully', success: true, response });
 		}
 		catch (err: any) {
 			returnError(res, err);

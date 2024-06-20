@@ -101,13 +101,17 @@ export default class Database {
 		try {
 			username = await this.escape(username) as string;
 			password = await this.escape(password) as string;
+			const nfc_key = await this.escape(nfc_hash()) as string;
 			const user_exists = await this.atleastOne(`SELECT * FROM user WHERE username = ${username}`);
 			if (user_exists) {
 				throw new AlreadyExistsError('User already exists', 'database.ts::addUser');
 			}
-			const user = await this.query<DatabaseTypes.User[]>(`INSERT INTO user (username, password) VALUES (${username}, ${password})`);
-			await this.setUserNFC(username, nfc_hash());
-			return user?.[0];
+			await this.query<DatabaseTypes.User[]>(`INSERT INTO user (username, password, nfc_key) VALUES (${username}, ${password}, ${nfc_key})`);
+			const user = await this.query<DatabaseTypes.User[]>(`SELECT * FROM user WHERE username = ${username}`);
+			if (user.length === 0) {
+				throw new DatabaseError(500, 'Error adding user', 'database.ts::addUser');
+			}
+			return user[0];
 		}
 		catch (err: any) {
 			if (err instanceof DatabaseError) {
