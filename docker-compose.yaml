@@ -18,6 +18,7 @@ services:
       - db
   db:
     container_name: weightlifter-api-db
+    platform: linux/x86_64
     image: mysql:5.7.24
     restart: always
     tty: true
