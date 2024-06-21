@@ -29,8 +29,10 @@ export namespace DatabaseTypes {
 	}
 
 	export type ActiveWorkout = {
+		aw_id: number;
+		workout_id: number;
 		current_user: number,
-		current_exercise: Exercise,
+		current_exercise?: Exercise,
 		next_exercise: Exercise[],
 	}
 

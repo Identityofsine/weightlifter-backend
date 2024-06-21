@@ -3,6 +3,7 @@ import { AlreadyExistsError, AuthenticationError, DatabaseError, DatabaseIOError
 import { DatabaseTypes } from './database.types';
 import nfc_hash from '../nfc';
 import { RouteTypes } from '../api/routes/route.types';
+import { randomizeNumber, randomizeString } from '../algorithim';
 
 export default class Database {
 	private static instance: Database;
@@ -193,6 +194,26 @@ export default class Database {
 		}
 	}
 
+	public async getUsersByIDs(user_ids: number[]): Promise<DatabaseTypes.User[]> {
+		if (!user_ids || user_ids.length === 0) {
+			throw new DatabaseIOError('No user_ids provided', 'database.ts::getUsersByIDs');
+		}
+		try {
+			const user_statement = `SELECT * FROM user WHERE ${user_ids.map((id) => `user_id = ${id}`).join(' OR ')}`;
+			const user_query = await this.query<DatabaseTypes.User[]>(user_statement);
+			if (!user_query || user_query.length === 0 || user_query.length !== user_ids.length) {
+				throw new NotFoundError('Mismatch between Found Users and Users Provided', 'database.ts::getUsersByIDs');
+			}
+			return user_query;
+		}
+		catch (err: any) {
+			if (err instanceof DatabaseError) {
+				throw err;
+			}
+			return [];
+		}
+	}
+
 	//FIX: change to bcrypt later
 	public async logUserIn(username: string, password?: string, nfc?: string): Promise<DatabaseTypes.UserToken> {
 		try {
@@ -230,43 +251,6 @@ export default class Database {
 	}
 
 	/* BLOCK: WORKOUT & EXERCISE LOGIC */
-
-	//start workout
-	public async startWorkout(user_id: number[], workout_id: number): Promise<RouteTypes.WorkoutExercise> {
-		try {
-			if (!user_id || user_id.length === 0 || workout_id < 0) {
-				throw new DatabaseIOError('Invalid user_id or workout_id', 'database.ts::startWorkout');
-			}
-			const workout_exists = await this.atleastOne(`SELECT * FROM workout WHERE workout_id = '${workout_id}'`);
-			if (!workout_exists) {
-				throw new NotFoundError('Workout not found', 'database.ts::startWorkout');
-			}
-			const user_exists = await this.atleastOne(`SELECT * FROM user WHERE user_id = '${user_id}'`);
-			if (!user_exists) {
-				throw new NotFoundError('User not found', 'database.ts::startWorkout');
-			}
-			const workout = await this.getWorkout(workout_id);
-			if (!workout || workout.workout_id < 0) {
-				throw new NotFoundError('Workout not found', 'database.ts::startWorkout');
-			}
-			const current_exercise = workout.exercises[0];
-			return {
-				workout_id,
-				current_user: user_id[0],
-				current_exercise: {
-					id: current_exercise.exercise_id,
-					sets: current_exercise.sets,
-					reps: current_exercise.reps
-				}
-			};
-		} catch (e: any) {
-			if (e instanceof DatabaseError) {
-				throw e;
-			}
-			return { workout_id: -1, current_user: -1, current_exercise: { id: -1, sets: 0, reps: 0 } };
-		}
-
-	}
 
 	//get a workout from the database
 	public async getWorkout(workout_id: number): Promise<DatabaseTypes.Workout> {
@@ -323,31 +307,6 @@ export default class Database {
 		}
 	}
 
-	public async getRemainingExercises(active_workout_id: number, original_workout_id: number, user_id: number): Promise<DatabaseTypes.ActiveWorkout> {
-		try {
-			if (!active_workout_id || active_workout_id < 0 || !user_id || user_id < 0 || !original_workout_id || original_workout_id < 0) {
-				throw new DatabaseIOError('Invalid active_workout_id or user_id', 'database.ts::getRemainingExercises');
-			}
-			const active_workout_exists = await this.atleastOne(`SELECT * from past_workouts WHERE pw_id = ${active_workout_id}`);
-			if (!active_workout_exists) {
-				throw new NotFoundError('Active workout not found', 'database.ts::getRemainingExercises');
-			}
-			const completed_exercises = await this.query<DatabaseTypes.Exercise[]>(`SELECT exercise.* FROM (
-				SELECT uwh_id FROM user_workout_history WHERE past_workout_id = ${active_workout_id} AND user_id = ${user_id}
-			) uwh 
-			INNER JOIN past_exercise
-			ON past_exercise.uwh_id = uwh.uwh_id
-			INNER JOIN exercise
-			ON exercise.exercise_id = past_exercise.exercise_id`);
-			if (!completed_exercises) {
-				throw new NotFoundError('No exercises found', 'database.ts::getRemainingExercises');
-			}
-			return { current_user: user_id as number, current_exercise: completed_exercises[0], next_exercise: completed_exercises.slice(1) };
-		} catch (err: any) {
-			throw err;
-		}
-	}
-
 	//exercise and workout stuff
 	public async addExerciseToWorkout(workout_id: number, exercises: RouteTypes.WorkoutExerciseInput[]): Promise<DatabaseTypes.Workout> {
 		try {
@@ -390,7 +349,7 @@ export default class Database {
 
 	//get all exercises in a workout
 	public async getExercisesByWorkout(workout_id: number): Promise<DatabaseTypes.Exercise[]> {
-		const exercises = await this.query<DatabaseTypes.Exercise[]>(`SELECT * FROM workout_bridge WHERE workout_id = '${workout_id}'`);
+		const exercises = await this.query<DatabaseTypes.Exercise[]>(`SELECT exercise.* FROM workout_bridge INNER JOIN exercise ON workout_bridge.exercise_id = exercise.exercise_id WHERE workout_id = ${workout_id} ORDER BY sequence ASC`);
 		return exercises;
 	}
 
@@ -438,6 +397,58 @@ export default class Database {
 				throw err;
 			}
 			return { exercise_id: -1, name: '', description: '', sets: 0, reps: 0, time_flag: false };
+		}
+	}
+
+	private async alreadyInWorkout(user_id: number): Promise<boolean> {
+		const response = await this.query<any[]>(`SELECT * FROM users_in_workout WHERE user_id = ${user_id}`);
+		return response.length > 0;
+	}
+
+	//dynamic workout stuff
+	public async startWorkout(user_id: number[], workout_id: number): Promise<DatabaseTypes.ActiveWorkout> {
+		try {
+
+			if (!user_id || user_id.length < 0 || !workout_id || workout_id < 0) {
+				throw new DatabaseIOError('Invalid user_id or workout_id', 'database.ts::startWorkout');
+			}
+
+			const workout = await this.getWorkout(workout_id);
+			if (!workout || workout.workout_id < 0) {
+				throw new NotFoundError('Workout not found', 'database.ts::startWorkout');
+			}
+
+			const user_statement = `SELECT * FROM user WHERE ${user_id.map((id) => `user_id = ${id}`).join(' OR ')}`;
+			const user_query = await this.query<DatabaseTypes.User[]>(user_statement);
+			if (!user_query || user_query.length === 0 || user_query.length !== user_id.length) {
+				throw new NotFoundError('Mismatch between Found Users and Users Provided', 'database.ts::startWorkout');
+			}
+
+			const aw_id = randomizeNumber(8);
+			//begin workout
+			await this.query(`INSERT INTO active_workout (aw_id, workout_id) VALUES (${aw_id}, ${workout_id})`);
+			//add users to workout
+			user_id.forEach(async (id: number) => {
+				if (!id || id < 0) {
+					throw new DatabaseIOError('Invalid user_id', 'database.ts::startWorkout');
+				}
+				//check if user is already in a workout
+				await this.alreadyInWorkout(id);
+				console.warn('[database.ts::startWorkout] User already in workout, ending previous workout');
+				await this.query(`INSERT INTO users_in_workout (aw_id, user_id) VALUES (${aw_id}, ${id})`);
+			});
+
+			const current_exercise = workout.exercises[0];
+			const next_exercise = workout.exercises.slice(1);
+			return {
+				aw_id: aw_id,
+				workout_id: workout_id,
+				current_user: user_id[0],
+				current_exercise: current_exercise,
+				next_exercise: next_exercise
+			};
+		} catch (err: any) {
+			throw err
 		}
 	}
 }

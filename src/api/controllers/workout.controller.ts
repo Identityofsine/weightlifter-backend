@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { RouteError, RouteIOError, returnError } from '../routes/route.error';
 import Database from '../../db/database';
+import { Workout, WorkoutInstances } from '../../model/workout';
 
 const db = Database.getInstance();
 
@@ -124,22 +125,25 @@ export namespace WorkoutController {
 		}
 	}
 
-	export async function getActiveWorkout(req: Request, res: Response) {
+	export async function startWorkout(req: Request, res: Response) {
 		try {
-			const { active_workout_id, workout_id } = req.query;
-			const user_id = req.headers['user-id'];
-			if (!active_workout_id || !workout_id || !user_id) {
-				throw new RouteIOError('Active Workout ID or Workout ID not provided', 'workout.controller.ts::getActiveWorkout');
-			}
-			if (isNaN(parseInt(active_workout_id as string)) || isNaN(parseInt(workout_id as string)) || isNaN(parseInt(user_id as string))) {
-				throw new RouteIOError('Active Workout ID or Workout ID must be a number', 'workout.controller.ts::getActiveWorkout');
-			}
-			const response = await db.getRemainingExercises(active_workout_id as unknown as number, user_id as unknown as number, workout_id as unknown as number);
-			if (!response) {
-				throw new RouteError(500, 'Error getting active workout', 'workout.controller.ts::getActiveWorkout');
-			}
-			return res.status(200).json({ status: 200, message: 'Active workout retrieved successfully', success: true, active_workout: response });
+			const workout_id = req.body['workout_id'] as number;
+			const users = req.body['users'] as number[];
 
+			const workout = await db.getWorkout(workout_id);
+			const user = await db.getUsersByIDs(users);
+
+			if (!workout || !user) {
+				throw new RouteIOError('Workout or user not found', 'workout.controller.ts::startWorkout');
+			}
+
+			WorkoutInstances.add(new Workout(workout_id, workout.name, workout.exercises));
+			const response = WorkoutInstances.get(workout_id);
+
+			if (!response) {
+				throw new RouteError(500, 'Error starting workout', 'workout.controller.ts::startWorkout');
+			}
+			return res.status(200).json({ status: 200, message: 'Workout started successfully', success: true, workout: response });
 		} catch (err: any) {
 			returnError(res, err);
 		}
