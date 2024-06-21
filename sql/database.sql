@@ -34,7 +34,7 @@ CREATE TABLE `workout_bridge` (
 	`exercise_id` integer NOT NULL,
 	`sets` integer NOT NULL,
 	`reps` integer NOT NULL,
-	`order` integer NOT NULL
+	`sequence` integer NOT NULL
 );
 
 CREATE TABLE `exercise` (

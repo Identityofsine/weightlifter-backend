@@ -290,13 +290,14 @@ export default class Database {
 			if (!workout_id || workout_id < 0 || !exercises) {
 				throw new DatabaseIOError('Invalid workout_id or exercise list', 'database.ts::addExerciseToWorkout');
 			}
+			//check if workout exists
 			const workout_exists = await this.atleastOne(`SELECT * FROM workout WHERE workout_id = '${workout_id}'`);
 			if (!workout_exists) {
 				throw new NotFoundError('Workout not found', 'database.ts::addExerciseToWorkout');
 			}
 
 			//get previous order
-			const order = ((await this.query<number[]>(`SELECT MAX('order') FROM workout_bridge WHERE workout_id = ${workout_id}`))?.[0] + 1) ?? 0;
+			const order = ((await this.query<{ "MAX(sequence)": number }[]>(`SELECT MAX(sequence) FROM workout_bridge WHERE workout_id = ${workout_id}`))?.[0]["MAX(sequence)"]) ?? 0 + 1 as number;
 
 			for (let i = 0; i < exercises.length; i++) {
 				try {
@@ -306,7 +307,7 @@ export default class Database {
 					if (exercise.exercise_id < 0) {
 						throw new NotFoundError('Exercise not found', 'database.ts::addExerciseToWorkout');
 					}
-					await this.query(`INSERT INTO workout_bridge (workout_id, exercise_id, sets, reps, order) VALUES ('${workout_id}', '${exercise.exercise_id}', ${sets}, ${reps}, '${order + i}')`)
+					await this.query<DatabaseTypes.Exercise[]>(`INSERT INTO workout_bridge (workout_id, exercise_id, sets, reps, sequence) VALUES (${workout_id}, ${exercise.exercise_id}, ${sets}, ${reps}, ${order + i})`);
 				} catch (e: any) {
 					if (e instanceof NotFoundError) {
 						throw e;
@@ -314,9 +315,7 @@ export default class Database {
 					continue;
 				}
 			}
-
 			return await this.getWorkout(workout_id);
-
 		} catch (e: any) {
 			if (e instanceof DatabaseError) {
 				throw e;

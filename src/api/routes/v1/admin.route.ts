@@ -8,6 +8,7 @@ const AdminRouter = express.Router();
 AdminRouter.use(isAdmin);
 AdminRouter.post('/addWorkout', WorkoutController.addWorkout);
 AdminRouter.post('/addExercise', WorkoutController.addExercise);
+AdminRouter.post('/addExerciseToWorkout', WorkoutController.addExerciseToWorkout);
 
 export { AdminRouter };
 

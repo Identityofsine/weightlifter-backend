@@ -48,5 +48,31 @@ export namespace WorkoutController {
 			returnError(res, err);
 		}
 	}
+
+	export async function addExerciseToWorkout(req: Request, res: Response) {
+		try {
+			const { workout_id, exercise } = req.body;
+			if (!workout_id || !exercise) {
+				throw new RouteIOError('Workout or Exercise not provided', 'workout.controller.ts::addExerciseToWorkout');
+			}
+			//check if exercise is an array
+			if (!Array.isArray(exercise)) {
+				throw new RouteIOError('Exercise must be an array', 'workout.controller.ts::addExerciseToWorkout');
+			}
+			// add workout to the database
+			const response = await db.addExerciseToWorkout(workout_id, exercise);
+			if (!response) {
+				throw new RouteError(500, 'Error adding exercise to workout', 'workout.controller.ts::addExerciseToWorkout');
+			}
+			//workout_id === -1
+			if (response!.workout_id === -1) {
+				throw new RouteError(400, 'Exercise already exists in workout', 'workout.controller.ts::addExerciseToWorkout');
+			}
+			return res.status(200).json({ status: 200, message: 'Exercise added to workout successfully', success: true, workout: response });
+		}
+		catch (err: any) {
+			returnError(res, err);
+		}
+	}
 }
 
