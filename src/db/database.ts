@@ -163,6 +163,7 @@ export default class Database {
 		}
 	}
 
+	//FIX: change to bcrypt later
 	public async authenticateUser(username: string, token?: string, nfc?: string): Promise<boolean> {
 		try {
 			username = await this.escape(username) as string;
@@ -192,6 +193,7 @@ export default class Database {
 		}
 	}
 
+	//FIX: change to bcrypt later
 	public async logUserIn(username: string, password?: string, nfc?: string): Promise<DatabaseTypes.UserToken> {
 		try {
 			username = await this.escape(username) as string;
@@ -324,7 +326,7 @@ export default class Database {
 		}
 	}
 
-
+	//get all exercises in a workout
 	public async getExercisesByWorkout(workout_id: number): Promise<DatabaseTypes.Exercise[]> {
 		const exercises = await this.query<DatabaseTypes.Exercise[]>(`SELECT * FROM workout_bridge WHERE workout_id = '${workout_id}'`);
 		return exercises;
@@ -353,7 +355,7 @@ export default class Database {
 		}
 	}
 
-
+	//create a new exercise
 	public async createExercise(exercise: Omit<DatabaseTypes.Exercise, 'exercise_id'>): Promise<DatabaseTypes.Exercise> {
 		try {
 			const name = await this.escape(exercise.name) as string;
