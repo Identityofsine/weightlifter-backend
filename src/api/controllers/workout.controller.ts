@@ -77,8 +77,10 @@ export namespace WorkoutController {
 
 	export async function getWorkout(req: Request, res: Response) {
 		try {
+			//workout_id
 			const workout_id_old = req.query['workout_id'] as string;
 
+			//workout_id_old
 			if (!workout_id_old) {
 				throw new RouteIOError('Workout ID not provided', 'workout.controller.ts::getWorkout');
 			}
@@ -86,9 +88,11 @@ export namespace WorkoutController {
 				throw new RouteIOError('Workout ID must be a number', 'workout.controller.ts::getWorkout');
 			}
 
+			//workout_id
 			const workout_id = parseInt(workout_id_old);
 			const response = await db.getWorkout(workout_id);
 
+			//response
 			if (!response) {
 				throw new RouteError(500, 'Error getting workouts', 'workout.controller.ts::getWorkouts');
 			}
@@ -96,6 +100,26 @@ export namespace WorkoutController {
 			return res.status(200).json({ status: 200, message: 'Workouts retrieved successfully', success: true, workout: response });
 		}
 		catch (err: any) {
+			returnError(res, err);
+		}
+	}
+
+	export async function getExercise(req: Request, res: Response) {
+		try {
+			const exercise_id_old = req.query['exercise_id'] as string;
+			if (!exercise_id_old) {
+				throw new RouteIOError('Exercise ID not provided', 'workout.controller.ts::getExercise');
+			}
+			if (isNaN(parseInt(exercise_id_old))) {
+				throw new RouteIOError('Exercise ID must be a number', 'workout.controller.ts::getExercise');
+			}
+			const exercise_id = parseInt(exercise_id_old);
+			const response = await db.getExercise(exercise_id);
+			if (!response) {
+				throw new RouteError(500, 'Error getting exercise', 'workout.controller.ts::getExercise');
+			}
+			return res.status(200).json({ status: 200, message: 'Exercise retrieved successfully', success: true, exercise: response });
+		} catch (err: any) {
 			returnError(res, err);
 		}
 	}
