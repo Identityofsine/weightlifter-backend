@@ -16,8 +16,8 @@ CREATE TABLE `user` (
 );
 
 CREATE TABLE `workout` (
-  `workout_id` integer PRIMARY KEY NOT NULL AUTO_INCREMENT
-	`name` VARCHAR(255) NOT NULL UNIQUE,
+  `workout_id` integer PRIMARY KEY NOT NULL AUTO_INCREMENT,
+	`name` VARCHAR(255) NOT NULL UNIQUE
 );
 
 CREATE TABLE `user_auth` (
@@ -49,7 +49,8 @@ CREATE TABLE `exercise` (
 CREATE TABLE `user_workout_history` (
 	`uwh_id` integer PRIMARY KEY NOT NULL AUTO_INCREMENT,
 	`user_id` integer NOT NULL,
-	`workout_id` integer NOT NULL
+	`workout_id` integer NOT NULL,
+	`past_workout_id` integer NOT NULL
 );
 
 CREATE TABLE `past_workouts` (
@@ -93,6 +94,7 @@ ALTER TABLE `workout_bridge` ADD FOREIGN KEY (`exercise_id`) REFERENCES `exercis
 
 ALTER TABLE `user_workout_history` ADD FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`);
 ALTER TABLE `user_workout_history` ADD FOREIGN KEY (`workout_id`) REFERENCES `past_workouts`(`workout_id`);
+ALTER TABLE `user_workout_history` ADD FOREIGN KEY (`past_workout_id`) REFERENCES `past_workouts`(`pw_id`);
 
 ALTER TABLE `past_workouts` ADD FOREIGN KEY (`workout_id`) REFERENCES `workout`(`workout_id`);
 
@@ -103,5 +105,8 @@ ALTER TABLE `past_exercise` ADD FOREIGN KEY (`exercise_id`) REFERENCES `exercise
 ALTER TABLE `measurements` ADD FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`);
 
 ALTER TABLE `user_auth` ADD FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`);
+
+
+-- demo data
 
 

@@ -28,6 +28,12 @@ export namespace DatabaseTypes {
 		exercises: Exercise[];
 	}
 
+	export type ActiveWorkout = {
+		current_user: number,
+		current_exercise: Exercise,
+		next_exercise: Exercise[],
+	}
+
 	export type Measurement = {
 		measurement_id: number;
 		user_id: number;
