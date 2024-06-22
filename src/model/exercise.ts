@@ -50,6 +50,23 @@ class Exercise implements Omit {
 		return this.weight_done;
 	}
 
+	public repsOfSet(set: number): number {
+		return this.reps_done[set];
+	}
+
+	public weightOfSet(set: number): number {
+		return this.weight[set];
+	}
+
+	public setWeightOfSet(set: number, weight: number) {
+		this.weight_done[set] = weight;
+	}
+
+	public setRepsOfSet(set: number, reps: number) {
+		this.reps_done[set] = reps;
+	}
+
+
 	public static copy(exercise: Exercise, reps: number, sets: number, weight: number): Exercise {
 		const newExercise = new Exercise(exercise.exercise_id, exercise.name, exercise.description, exercise.sets, exercise.reps, exercise.time_flag);
 		newExercise.setsDone = sets;

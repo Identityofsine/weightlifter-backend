@@ -176,5 +176,29 @@ export namespace WorkoutController {
 			returnError(res, err);
 		}
 	}
+
+	export async function editSet(req: Request, res: Response) {
+		try {
+			//variable declaration 
+			const cw_id = req.body['cw_id'] as number;
+			const exercise_id = req.body['exercise_id'] as number;
+			const set = req.body['set'] as number;
+			const user_id = parseInt(req.headers['user-id'] as string);
+			const reps = req.body['reps'] as number | undefined;
+			const weight = req.body['weight'] as number | undefined;
+
+			const workout = WorkoutInstances.get(cw_id);
+			if (!workout) {
+				throw new RouteIOError('Either the workout never existed or it has been finished, please use a different route for modifying old workout data', 'workout.controller.ts::editSet');
+			}
+
+			const new_workout = workout.edit_set(user_id, exercise_id, set, reps, weight).omit();
+
+			return res.status(200).json({ status: 200, message: 'Set edited successfully', success: true, workout: new_workout });
+
+		} catch (err: any) {
+			returnError(res, err);
+		}
+	}
 }
 

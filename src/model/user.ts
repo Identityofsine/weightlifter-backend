@@ -15,12 +15,18 @@ class User implements Omit<User> {
 		this.exercises.push(exercise);
 	}
 
-	editExercise(exercise_id: number, sets: number, reps: number, weight: number) {
+	editExercise(exercise_id: number, set_id?: number, set?: number, reps?: number, weight?: number) {
 		const exercise = this.exercises.find(exercise => exercise.exercise_id === exercise_id);
 		if (exercise) {
-			exercise.setsDone = sets;
-			exercise.repsDone = reps;
-			exercise.weight = weight;
+			if (set_id) {
+				set_id = set_id - 1 < 0 ? 0 : set_id - 1;
+				exercise.setRepsOfSet(set_id, reps || exercise.repsOfSet(set_id));
+				exercise.setWeightOfSet(set_id, weight || exercise.weightOfSet(set_id))
+			} else if (set) {
+				exercise.setsDone = set;
+				exercise.repsDone = reps ?? 0;
+				exercise.weight = weight ?? 0;
+			}
 		}
 	}
 

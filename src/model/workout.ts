@@ -63,18 +63,35 @@ export class Workout implements Omit {
 			const exercise = this.exercises.current;
 			if (exercise) {
 				if (user.getExercise(exercise.exercise_id)) {
-					user.editExercise(exercise.exercise_id, exercise.setsDone + 1, reps, weight);
+					user.editExercise(exercise.exercise_id, undefined, exercise.setsDone + 1, reps, weight);
 				} else {
 					user.addExercise(Exercise.copy(exercise, reps, 1, weight));
 				}
 				this.next();
+			} else {
+				throw new WorkoutError(404, 'Exercise not found', 'workout.ts::complete_set');
 			}
 			if (this.finished) {
 				Database.getInstance().finishWorkout(this);
 				WorkoutInstances.remove(this.cw_id);
 			}
 		} else {
-			throw new RouteError(500, 'Error completing set', 'workout.ts::complete_set');
+			throw new WorkoutError(500, 'No user found', 'workout.ts::complete_set');
+		}
+		return this;
+	}
+
+	public edit_set(user_id: number, exercise_id: number, set: number, reps?: number, weight?: number): Workout {
+		const user = this.users.find((u) => u.user_id === user_id);
+		if (user) {
+			const exercise = this.exercises.find((e) => e.exercise_id === exercise_id);
+			if (exercise) {
+				user.editExercise(exercise_id, set, undefined, reps, weight);
+			} else {
+				throw new WorkoutError(404, 'Exercise not found', 'workout');
+			}
+		} else {
+			throw new WorkoutError(500, 'No user found', 'workout.ts::edit_set');
 		}
 		return this;
 	}
@@ -97,6 +114,13 @@ export class Workout implements Omit {
 	}
 
 
+}
+
+export class WorkoutError extends RouteError {
+	constructor(public readonly status: number = 500, message: string, source: string) {
+		super(status, message, source);
+		this.name = 'WorkoutError::' + source;
+	}
 }
 
 export class WorkoutInstances {

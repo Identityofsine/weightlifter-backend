@@ -8,5 +8,6 @@ WorkoutRouter.get('/get', WorkoutController.getWorkout);
 WorkoutRouter.get('/getexercise', WorkoutController.getExercise);
 WorkoutRouter.post('/start', WorkoutController.startWorkout);
 WorkoutRouter.post('/cset', WorkoutController.completeSet);
+WorkoutRouter.post('/eset', WorkoutController.editSet);
 
 export { WorkoutRouter };
