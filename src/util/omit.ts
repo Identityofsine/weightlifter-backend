@@ -1,3 +1,7 @@
+export interface Omit<T = any> {
+	omit(): Partial<T>;
+}
+
 export function omit<T extends Record<string, any>>(value: T, ...keys: Array<keyof T>): T {
 	const obj_keys = Object.keys(value);
 	let obj = { ...value };

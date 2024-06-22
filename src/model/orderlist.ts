@@ -1,13 +1,15 @@
-type OrderedEvents = 'onPointerReset';
+import { Omit } from "../util/omit";
 
-class OrderedList<T> {
+type OrderedEvents = 'onPointerReset' | 'onPointerMove';
+
+class OrderedList<T extends Omit> implements Omit {
 	private items: T[] = [];
 	private pointer: number = 0;
 	private events: { [key in OrderedEvents]: Function[] };
 
 	constructor(items: T[] = []) {
 		this.items = items;
-		this.events = { 'onPointerReset': [] };
+		this.events = { 'onPointerReset': [], 'onPointerMove': [] };
 	}
 
 	public add(item: T) {
@@ -32,6 +34,10 @@ class OrderedList<T> {
 		return this.items[this.pointer];
 	}
 
+	public get all(): T[] {
+		return this.items;
+	}
+
 	public swap(index1: number, index2: number) {
 		const temp = this.items[index1];
 		this.items[index1] = this.items[index2];
@@ -46,12 +52,24 @@ class OrderedList<T> {
 			this.events.onPointerReset.forEach(callback =>
 				callback(this.items[this.pointer])
 			);
+		} else {
+			this.events.onPointerMove.forEach(callback =>
+				callback(this.items[this.pointer])
+			);
 		}
 		return item;
 	}
 
 	public remove(index: number) {
 		this.items = this.items.filter((item, i) => i !== index);
+	}
+
+	public removeIf(callback: (item: T) => boolean) {
+		this.items = this.items.filter(item => !callback(item));
+	}
+
+	public omit() {
+		return this.items.map(item => item.omit());
 	}
 }
 

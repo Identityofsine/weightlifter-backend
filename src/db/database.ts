@@ -3,7 +3,10 @@ import { AlreadyExistsError, AuthenticationError, DatabaseError, DatabaseIOError
 import { DatabaseTypes } from './database.types';
 import nfc_hash from '../nfc';
 import { RouteTypes } from '../api/routes/route.types';
-import { randomizeNumber, randomizeString } from '../algorithim';
+import { formatToMySQLDateTime, formatToMySQLTime, randomizeNumber, randomizeString } from '../algorithim';
+import Exercise from '../model/exercise';
+import { Workout } from '../model/workout';
+import User from '../model/user';
 
 export default class Database {
 	private static instance: Database;
@@ -349,7 +352,7 @@ export default class Database {
 
 	//get all exercises in a workout
 	public async getExercisesByWorkout(workout_id: number): Promise<DatabaseTypes.Exercise[]> {
-		const exercises = await this.query<DatabaseTypes.Exercise[]>(`SELECT exercise.* FROM workout_bridge INNER JOIN exercise ON workout_bridge.exercise_id = exercise.exercise_id WHERE workout_id = ${workout_id} ORDER BY sequence ASC`);
+		const exercises = await this.query<DatabaseTypes.Exercise[]>(`SELECT exercise.exercise_id, exercise.name, exercise.description, exercise.time_flag, workout_bridge.sets, workout_bridge.reps FROM workout_bridge INNER JOIN exercise ON workout_bridge.exercise_id = exercise.exercise_id WHERE workout_id = ${workout_id} ORDER BY sequence ASC`);
 		return exercises;
 	}
 
@@ -405,50 +408,35 @@ export default class Database {
 		return response.length > 0;
 	}
 
-	//dynamic workout stuff
-	public async startWorkout(user_id: number[], workout_id: number): Promise<DatabaseTypes.ActiveWorkout> {
+	public async finishWorkout(data: Workout): Promise<{ past_workout_id: number }> {
 		try {
+			const users = data.users.all;
+			const cw_id = data.cw_id;
+			const workout_id = data.workout_id;
+			const date = formatToMySQLDateTime(new Date());
+			const time = formatToMySQLTime(new Date());
+			//finished is datetime and duration is time (duration unavailable)
+			await this.query(`INSERT INTO past_workouts (pw_id, workout_id, finished, duration) VALUES (${cw_id}, ${workout_id}, '${date}', '${time}')`);
 
-			if (!user_id || user_id.length < 0 || !workout_id || workout_id < 0) {
-				throw new DatabaseIOError('Invalid user_id or workout_id', 'database.ts::startWorkout');
-			}
-
-			const workout = await this.getWorkout(workout_id);
-			if (!workout || workout.workout_id < 0) {
-				throw new NotFoundError('Workout not found', 'database.ts::startWorkout');
-			}
-
-			const user_statement = `SELECT * FROM user WHERE ${user_id.map((id) => `user_id = ${id}`).join(' OR ')}`;
-			const user_query = await this.query<DatabaseTypes.User[]>(user_statement);
-			if (!user_query || user_query.length === 0 || user_query.length !== user_id.length) {
-				throw new NotFoundError('Mismatch between Found Users and Users Provided', 'database.ts::startWorkout');
-			}
-
-			const aw_id = randomizeNumber(8);
-			//begin workout
-			await this.query(`INSERT INTO active_workout (aw_id, workout_id) VALUES (${aw_id}, ${workout_id})`);
-			//add users to workout
-			user_id.forEach(async (id: number) => {
-				if (!id || id < 0) {
-					throw new DatabaseIOError('Invalid user_id', 'database.ts::startWorkout');
+			//lol n^3...
+			for (let i = 0; i < users.length; i++) {
+				const user = users[i];
+				for (let j = 0; j < user.getExercises().length; j++) {
+					const exercise = user.getExercises()[j];
+					const pe_id = randomizeNumber(6);
+					await this.query(`INSERT INTO past_exercise (pe_id, user_id, workout_id, exercise_id, sets) VALUES (${pe_id}, ${user.user_id}, ${cw_id}, ${exercise.exercise_id}, ${exercise.setsDone})`);
+					for (let z = 0; z < exercise.setsDone; z++) {
+						const reps = exercise.repsDone[z];
+						const weight = exercise.weight[z];
+						await this.query(`INSERT INTO past_set (pe_id, weight, reps) VALUES (${pe_id}, ${weight}, ${reps})`);
+					}
 				}
-				//check if user is already in a workout
-				await this.alreadyInWorkout(id);
-				console.warn('[database.ts::startWorkout] User already in workout, ending previous workout');
-				await this.query(`INSERT INTO users_in_workout (aw_id, user_id) VALUES (${aw_id}, ${id})`);
-			});
+			}
 
-			const current_exercise = workout.exercises[0];
-			const next_exercise = workout.exercises.slice(1);
-			return {
-				aw_id: aw_id,
-				workout_id: workout_id,
-				current_user: user_id[0],
-				current_exercise: current_exercise,
-				next_exercise: next_exercise
-			};
-		} catch (err: any) {
-			throw err
+			return { past_workout_id: cw_id };
+		}
+		catch (err: any) {
+			return { past_workout_id: -1 };
 		}
 	}
 }

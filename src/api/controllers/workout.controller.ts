@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
+import { omit } from '../../util/omit'
 import { RouteError, RouteIOError, returnError } from '../routes/route.error';
 import Database from '../../db/database';
 import { Workout, WorkoutInstances } from '../../model/workout';
+import User from '../../model/user';
 
 const db = Database.getInstance();
 
@@ -136,14 +138,40 @@ export namespace WorkoutController {
 			if (!workout || !user) {
 				throw new RouteIOError('Workout or user not found', 'workout.controller.ts::startWorkout');
 			}
+			const newWorkout = new Workout(workout_id, workout.name, workout.exercises);
+			WorkoutInstances.add(newWorkout);
+			user.forEach(u => newWorkout.addUser(User.fromDatabase(u)));
 
-			WorkoutInstances.add(new Workout(workout_id, workout.name, workout.exercises));
-			const response = WorkoutInstances.get(workout_id);
+			const response = WorkoutInstances.get(newWorkout.cw_id);
 
 			if (!response) {
 				throw new RouteError(500, 'Error starting workout', 'workout.controller.ts::startWorkout');
 			}
 			return res.status(200).json({ status: 200, message: 'Workout started successfully', success: true, workout: response });
+		} catch (err: any) {
+			returnError(res, err);
+		}
+	}
+	export async function completeSet(req: Request, res: Response) {
+		try {
+			const cw_id = req.body['cw_id'] as number;
+			const reps = req.body['reps'] as number;
+			const weight = req.body['weight'] as number;
+			const user_id = parseInt(req.headers['user-id'] as string);
+
+			if (!cw_id || !reps || !weight || !user_id) {
+				throw new RouteIOError('Missing required fields', 'workout.controller.ts::completeSet');
+			}
+
+			const workout = WorkoutInstances.get(cw_id);
+
+			if (!workout) {
+				throw new RouteIOError('Workout not found', 'workout.controller.ts::completeSet');
+			}
+
+			const workout_new = { ...workout.complete_set(user_id, reps, weight), exercises: workout.exercises.all.map(e => omit(e, 'repsDone', 'weight')) };
+
+			return res.status(200).json({ status: 200, message: 'Set completed successfully', success: true, workout: workout_new });
 		} catch (err: any) {
 			returnError(res, err);
 		}

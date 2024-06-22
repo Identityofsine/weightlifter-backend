@@ -7,5 +7,6 @@ const WorkoutRouter = express.Router();
 WorkoutRouter.get('/get', WorkoutController.getWorkout);
 WorkoutRouter.get('/getexercise', WorkoutController.getExercise);
 WorkoutRouter.post('/start', WorkoutController.startWorkout);
+WorkoutRouter.post('/cset', WorkoutController.completeSet);
 
 export { WorkoutRouter };

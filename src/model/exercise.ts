@@ -1,6 +1,7 @@
 import { DatabaseTypes } from "../db/database.types";
+import { Omit } from "../util/omit";
 
-class Exercise {
+class Exercise implements Omit {
 	readonly exercise_id: number;
 	readonly name: string;
 	readonly description: string;
@@ -8,8 +9,8 @@ class Exercise {
 	readonly reps?: number;
 	readonly time_flag?: boolean;
 	private sets_done: number = 0;
-	private reps_done: number = 0;
-	private weight_done: number = 0;
+	private reps_done: number[] = [];
+	private weight_done: number[] = [];
 
 
 	constructor(exercise_id: number, name: string, description: string, sets: number, reps?: number, time_flag?: boolean) {
@@ -19,10 +20,13 @@ class Exercise {
 		this.sets = sets;
 		this.reps = reps;
 		this.time_flag = time_flag;
+		this.reps_done = new Array(sets).fill(0);
+		this.weight_done = new Array(sets).fill(0);
 	}
 
 	public set weight(weight: number) {
-		this.weight_done = weight;
+		const idx = (this.sets_done - 1 >= 0) ? this.sets_done - 1 : 0;
+		this.weight_done[idx] = weight;
 	}
 
 	public set setsDone(sets_done: number) {
@@ -30,18 +34,19 @@ class Exercise {
 	}
 
 	public set repsDone(reps_done: number) {
-		this.reps_done = reps_done;
+		const idx = (this.sets_done - 1 >= 0) ? this.sets_done - 1 : 0;
+		this.reps_done[idx] = reps_done;
 	}
 
 	public get setsDone(): number {
 		return this.sets_done;
 	}
 
-	public get repsDone(): number {
+	public get repsDone(): number[] {
 		return this.reps_done;
 	}
 
-	public get weight(): number {
+	public get weight(): number[] {
 		return this.weight_done;
 	}
 
@@ -57,6 +62,29 @@ class Exercise {
 		return new Exercise(exercise.exercise_id, exercise.name, exercise.description, exercise.sets ?? 4, exercise.reps, exercise.time_flag);
 	}
 
+	public omit() {
+		return {
+			exercise_id: this.exercise_id,
+			name: this.name,
+			description: this.description,
+			sets: this.sets,
+			reps: this.reps,
+			time_flag: this.time_flag,
+			sets_done: this.sets_done,
+		};
+	}
+
+	public omit_alt() {
+		return {
+			exercise_id: this.exercise_id,
+			name: this.name,
+			description: this.description,
+			sets_done: this.sets_done,
+			reps_done: this.reps_done,
+			weight_done: this.weight_done
+		};
+	}
 }
+
 
 export default Exercise;
