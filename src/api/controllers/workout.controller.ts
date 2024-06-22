@@ -147,7 +147,7 @@ export namespace WorkoutController {
 			if (!response) {
 				throw new RouteError(500, 'Error starting workout', 'workout.controller.ts::startWorkout');
 			}
-			return res.status(200).json({ status: 200, message: 'Workout started successfully', success: true, workout: response });
+			return res.status(200).json({ status: 200, message: 'Workout started successfully', success: true, workout: response.omit() });
 		} catch (err: any) {
 			returnError(res, err);
 		}
@@ -169,7 +169,7 @@ export namespace WorkoutController {
 				throw new RouteIOError('Workout not found', 'workout.controller.ts::completeSet');
 			}
 
-			const workout_new = { ...workout.complete_set(user_id, reps, weight), exercises: workout.exercises.all.map(e => omit(e, 'repsDone', 'weight')) };
+			const workout_new = workout.complete_set(user_id, reps, weight).omit();
 
 			return res.status(200).json({ status: 200, message: 'Set completed successfully', success: true, workout: workout_new });
 		} catch (err: any) {
