@@ -14,6 +14,7 @@ export class Workout implements Omit {
 	readonly exercises: OrderedList<Exercise>;
 	users: OrderedList<User>;
 	private current_user: User | undefined;
+	private current_exercise: number = 0;
 	private finished: boolean = false;
 
 	constructor(workout_id: number, name: string, exercises: DatabaseTypes.Exercise[]) {
@@ -36,6 +37,7 @@ export class Workout implements Omit {
 			this.current_user = args;
 		});
 		this.exercises.on('onPointerMove', (args: Exercise) => {
+			this.current_exercise = args.exercise_id;
 		});
 		this.exercises.on('onPointerReset', (args: Exercise) => {
 			//end_workout

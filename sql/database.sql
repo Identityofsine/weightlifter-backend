@@ -10,9 +10,17 @@ CREATE TABLE `user` (
   `user_id` integer PRIMARY KEY NOT NULL AUTO_INCREMENT, 
   `username` VARCHAR(40) NOT NULL UNIQUE,
   `password` VARCHAR(225) NOT NULL,
+	`name` VARCHAR(225) NOT NULL DEFAULT "",
+	`pfp_id` integer,
 	`nfc_key` VARCHAR(225) NOT NULL DEFAULT "",
 	`permission` INTEGER NOT NULL DEFAULT 0, -- 0 = user, 1 = workout_mutate, 2 = admin, 4 = root
 	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE `pfp` (
+	`pfp_id` integer PRIMARY KEY NOT NULL AUTO_INCREMENT,
+	`user_id` integer NOT NULL,
+	`path` VARCHAR(1024) NOT NULL
 );
 
 CREATE TABLE `workout` (
@@ -103,9 +111,11 @@ ALTER TABLE `user_auth` ADD FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`)
 
 ALTER TABLE `past_set` ADD FOREIGN KEY (`pe_id`) REFERENCES `past_exercise`(`pe_id`);
 
+ALTER TABLE `pfp` ADD FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`);
+
 -- demo data
 
-INSERT INTO `user` (`username`, `password`, `permission`) VALUES ('root', 'root', 4);
+INSERT INTO `user` (`username`, `password`, `name`, `permission`) VALUES ('root', 'root', 'Kevin', 4);
 
 INSERT INTO `workout` (`name`) VALUES ('Chest Day'), ('Leg Day'), ('Back Day'), ('Shoulder Day'), ('Arm Day');
 

@@ -5,10 +5,12 @@ import Exercise from "./exercise";
 class User implements Omit<User> {
 	public readonly user_id: number;
 	public readonly username: string;
+	public readonly name: string;
 	private exercises: Exercise[] = [];
-	constructor(user_id: number, username: string) {
+	constructor(user_id: number, username: string, name: string) {
 		this.user_id = user_id;
 		this.username = username;
+		this.name = name;
 	}
 
 	addExercise(exercise: Exercise) {
@@ -43,13 +45,14 @@ class User implements Omit<User> {
 	}
 
 	public static fromDatabase(data: DatabaseTypes.User): User {
-		return new User(data.user_id, data.username);
+		return new User(data.user_id, data.username, data.name);
 	}
 
 	public omit() {
 		return {
 			user_id: this.user_id,
 			username: this.username,
+			name: this.name,
 			exercises: this.exercises.map(exercise => exercise.omit_alt())
 		};
 	}

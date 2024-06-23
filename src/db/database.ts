@@ -102,16 +102,17 @@ export default class Database {
 		}
 	}
 
-	public async addUser(username: string, password: string, permission: number = 0): Promise<DatabaseTypes.User> {
+	public async addUser(username: string, password: string, name: string, permission: number = 0): Promise<DatabaseTypes.User> {
 		try {
 			username = await this.escape(username) as string;
 			password = await this.escape(password) as string;
+			name = await this.escape(name) as string;
 			const nfc_key = await this.escape(nfc_hash()) as string;
 			const user_exists = await this.atleastOne(`SELECT * FROM user WHERE username = ${username}`);
 			if (user_exists) {
 				throw new AlreadyExistsError('User already exists', 'database.ts::addUser');
 			}
-			await this.query<DatabaseTypes.User[]>(`INSERT INTO user (username, password, nfc_key, permission) VALUES (${username}, ${password}, ${nfc_key}, ${permission})`);
+			await this.query<DatabaseTypes.User[]>(`INSERT INTO user (username, password, name, nfc_key, permission) VALUES (${username}, ${password}, ${name}, ${nfc_key}, ${permission})`);
 			const user = await this.query<DatabaseTypes.User[]>(`SELECT * FROM user WHERE username = ${username}`);
 			if (user.length === 0) {
 				throw new DatabaseError(500, 'Error adding user', 'database.ts::addUser');
@@ -122,7 +123,7 @@ export default class Database {
 			if (err instanceof DatabaseError) {
 				throw err;
 			}
-			return { user_id: -1, username: '', password: '', nfc_key: '', permission: 0 };
+			return { user_id: -1, username: '', password: '', name: '', nfc_key: '', permission: 0 };
 		}
 	}
 
@@ -140,7 +141,7 @@ export default class Database {
 			if (err instanceof NotFoundError) {
 				throw err;
 			}
-			return { user_id: -1, username: '', password: '', nfc_key: '', permission: 0 };
+			return { user_id: -1, username: '', password: '', name: '', nfc_key: '', permission: 0 };
 		}
 	}
 
@@ -163,7 +164,7 @@ export default class Database {
 			if (err instanceof DatabaseError) {
 				throw err;
 			}
-			return { user_id: -1, username: '', password: '', nfc_key: '', permission: 0 };
+			return { user_id: -1, username: '', password: '', name: "", nfc_key: '', permission: 0 };
 		}
 	}
 

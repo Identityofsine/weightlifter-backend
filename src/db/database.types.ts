@@ -3,6 +3,7 @@ export namespace DatabaseTypes {
 		user_id: number;
 		username: string;
 		password: string;
+		name: string;
 		nfc_key: string;
 		permission: number;
 	}
