@@ -5,6 +5,24 @@ import Database from '../../db/database';
 const db = Database.getInstance();
 
 export namespace UserController {
+
+	export async function login(req: Request, res: Response) {
+		try {
+			const { nfc_key } = req.body;
+			if (!nfc_key) {
+				return res.status(400).json({ status: 400, message: 'NFC key not provided', success: false });
+			}
+			const user = await db.authenticateUser(null, null, nfc_key);
+			if (!user) {
+				return res.status(400).json({ status: 400, message: 'User not found', success: false });
+			}
+			return res.status(200).json({ status: 200, message: 'User found', success: true, user });
+		}
+		catch (err: any) {
+			returnError(res, err);
+		}
+	}
+
 	export async function addUser(req: Request, res: Response) {
 		try {
 			const { username, password, name, permission } = req.body;

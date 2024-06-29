@@ -169,30 +169,36 @@ export default class Database {
 	}
 
 	//FIX: change to bcrypt later
-	public async authenticateUser(username: string, token?: string, nfc?: string): Promise<boolean> {
+	public async authenticateUser(username?: string, password?: string, nfc?: string): Promise<DatabaseTypes.User | false> {
 		try {
-			username = await this.escape(username) as string;
-			if (!token && !nfc) {
+			if (!password && !nfc && !username) {
 				throw new DatabaseIOError('No authentication method provided', 'database.ts::authenticateUser');
 			}
-			const user_exists = await this.atleastOne(`SELECT * FROM user WHERE username = ${username}`);
-			if (!user_exists) {
-				throw new NotFoundError('User not found', 'database.ts::authenticateUser');
-			}
-			const user = await this.getUser(username);
-			if (token && nfc) {
+			if (password && nfc && username) {
 				throw new DatabaseError(400, 'Cannot authenticate with both token and nfc', 'database.ts::authenticateUser');
 			}
-			if (token) {
-				if (user.nfc_key !== token) {
+			if (password && username) {
+				const user_exists = await this.atleastOne(`SELECT * FROM user WHERE username = ${username}`);
+				if (!user_exists) {
+					throw new NotFoundError('User not found', 'database.ts::authenticateUser');
+				}
+				const user = await this.getUser(username);
+				if (user.password !== password) {
 					throw new AuthenticationError('Incorrect token', 'database.ts::authenticateUser');
 				}
+				return user;
 			} else if (nfc) {
-				if (user.nfc_key !== nfc) {
+				const user = await this.query<DatabaseTypes.User[]>(`SELECT * FROM user WHERE nfc_key = '${nfc}'`);
+				if (!user || user.length === 0) {
+					throw new NotFoundError('User not found', 'database.ts::authenticateUser');
+				}
+				if (user[0].nfc_key !== nfc) {
 					throw new AuthenticationError('Incorrect nfc', 'database.ts::authenticateUser');
 				}
+				return user[0];
+			} else {
+				throw new DatabaseError(400, 'No authentication method provided', 'database.ts::authenticateUser');
 			}
-			return true;
 		} catch (err: any) {
 			return false;
 		}
