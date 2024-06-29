@@ -280,6 +280,19 @@ export default class Database {
 		}
 	}
 
+	public async getWorkouts() {
+		try {
+			let workouts = await this.query<DatabaseTypes.Workout[]>(`SELECT * FROM workout`);
+			const workout_full = workouts.map(async (workout) => {
+				const exercises = await this.getExercisesByWorkout(workout.workout_id);
+				return { ...workout, exercises };
+			});
+			return await Promise.all(workout_full);
+		} catch (err: any) {
+			return [];
+		}
+	}
+
 	//add a workout into the database, using existing exercises.
 	public async addWorkout(workout: Omit<Omit<DatabaseTypes.Workout, 'workout_id'>, 'exercises'> & { exercises: RouteTypes.WorkoutExerciseInput[] }): Promise<DatabaseTypes.Workout> {
 		try {

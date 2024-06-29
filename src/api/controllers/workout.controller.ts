@@ -107,6 +107,19 @@ export namespace WorkoutController {
 		}
 	}
 
+	export async function getWorkouts(req: Request, res: Response) {
+		try {
+			const response = await db.getWorkouts();
+			if (!response) {
+				throw new RouteError(500, 'Error getting workouts', 'workout.controller.ts::getWorkouts');
+			}
+			return res.status(200).json({ status: 200, message: 'Workouts retrieved successfully', success: true, workouts: response });
+		}
+		catch (err: any) {
+			returnError(res, err);
+		}
+	}
+
 	export async function getExercise(req: Request, res: Response) {
 		try {
 			const exercise_id_old = req.query['exercise_id'] as string;
@@ -159,7 +172,11 @@ export namespace WorkoutController {
 			const weight = req.body['weight'] as number;
 			const user_id = parseInt(req.headers['user-id'] as string);
 
-			if (!cw_id || !reps || !weight || !user_id) {
+			if (reps === undefined || weight === undefined) {
+				throw new RouteIOError('Missing required fields', 'workout.controller.ts::completeSet');
+			}
+
+			if (!cw_id || reps < 0 || weight < 0 || !user_id) {
 				throw new RouteIOError('Missing required fields', 'workout.controller.ts::completeSet');
 			}
 

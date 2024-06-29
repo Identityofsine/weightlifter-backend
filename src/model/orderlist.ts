@@ -50,11 +50,11 @@ class OrderedList<T extends Omit> implements Omit {
 		if (this.pointer >= this.items.length) {
 			this.pointer = 0;
 			this.events.onPointerReset.forEach(callback =>
-				callback(this.items[this.pointer])
+				callback(this.items[this.pointer], this.pointer)
 			);
 		} else {
 			this.events.onPointerMove.forEach(callback =>
-				callback(this.items[this.pointer])
+				callback(this.items[this.pointer], this.pointer)
 			);
 		}
 		return item;

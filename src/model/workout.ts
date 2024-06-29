@@ -36,8 +36,8 @@ export class Workout implements Omit {
 		this.users.on('onPointerMove', (args: User) => {
 			this.current_user = args;
 		});
-		this.exercises.on('onPointerMove', (args: Exercise) => {
-			this.current_exercise = args.exercise_id;
+		this.exercises.on('onPointerMove', (args: Exercise, pointer: number) => {
+			this.current_exercise = pointer;
 		});
 		this.exercises.on('onPointerReset', (args: Exercise) => {
 			//end_workout
