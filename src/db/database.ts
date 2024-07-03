@@ -178,13 +178,13 @@ export default class Database {
 				throw new DatabaseError(400, 'Cannot authenticate with both token and nfc', 'database.ts::authenticateUser');
 			}
 			if (password && username) {
-				const user_exists = await this.atleastOne(`SELECT * FROM user WHERE username = ${username}`);
+				const user_exists = await this.atleastOne(`SELECT * FROM user WHERE username = ${await this.escape(username)}`);
 				if (!user_exists) {
 					throw new NotFoundError('User not found', 'database.ts::authenticateUser');
 				}
 				const user = await this.getUser(username);
 				if (user.password !== password) {
-					throw new AuthenticationError('Incorrect token', 'database.ts::authenticateUser');
+					throw new AuthenticationError('Incorrect password', 'database.ts::authenticateUser');
 				}
 				return user;
 			} else if (nfc) {
@@ -200,6 +200,9 @@ export default class Database {
 				throw new DatabaseError(400, 'No authentication method provided', 'database.ts::authenticateUser');
 			}
 		} catch (err: any) {
+			if (err instanceof DatabaseError) {
+				throw err;
+			}
 			return false;
 		}
 	}

@@ -79,7 +79,7 @@ CREATE TABLE `past_set` (
 CREATE TABLE `measurements` (
 	`measurement_id` integer PRIMARY KEY NOT NULL AUTO_INCREMENT,
 	`user_id` integer NOT NULL,
-	`weight` integer NOT NULL,
+	`weight` float NOT NULL,
 	`bodyfat` float NOT NULL,
 	`neck` float NOT NULL,
 	`back` float NOT NULL,

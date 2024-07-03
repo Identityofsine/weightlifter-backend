@@ -8,11 +8,14 @@ export namespace UserController {
 
 	export async function login(req: Request, res: Response) {
 		try {
-			const { nfc_key } = req.body;
-			if (!nfc_key) {
-				return res.status(400).json({ status: 400, message: 'NFC key not provided', success: false });
+			const { username, password, nfc_key } = req.body;
+			console.log(req.body)
+			if ((!username || !password) && !nfc_key) {
+				throw new RouteIOError('Username or Password not provided', 'user.controller.ts::login');
+			} else if (username && password && nfc_key) {
+				throw new RouteIOError('Username and Password and NFC Key provided', 'user.controller.ts::login');
 			}
-			const user = await db.authenticateUser(null, null, nfc_key);
+			const user = await db.authenticateUser(username, password, nfc_key);
 			if (!user) {
 				return res.status(400).json({ status: 400, message: 'User not found', success: false });
 			}
