@@ -12,7 +12,7 @@ export namespace UserController {
 			if (!nfc_key) {
 				return res.status(400).json({ status: 400, message: 'NFC key not provided', success: false });
 			}
-			const user = await db.authenticateUser(null, null, nfc_key);
+			const user = await db.authenticateUser(undefined, undefined, nfc_key);
 			if (!user) {
 				return res.status(400).json({ status: 400, message: 'User not found', success: false });
 			}
