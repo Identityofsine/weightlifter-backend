@@ -43,4 +43,19 @@ export namespace UserController {
 			returnError(res, err);
 		}
 	}
+
+	export async function logMeasurement(req: Request, res: Response) {
+		try {
+			const { measurement } = req.body;
+			if (!measurement) {
+				throw new RouteIOError('User ID, Measurement, or Timestamp not provided', 'user.controller.ts::logMeasurement');
+			}
+			const response = await db.submitMeasurement(measurement);
+			return res.status(200).json({ status: 200, message: 'Measurement logged successfully', success: true, response });
+		}
+		catch (err: any) {
+			returnError(res, err);
+		}
+	}
+
 }

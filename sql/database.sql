@@ -79,20 +79,20 @@ CREATE TABLE `past_set` (
 CREATE TABLE `measurements` (
 	`measurement_id` integer PRIMARY KEY NOT NULL AUTO_INCREMENT,
 	`user_id` integer NOT NULL,
-	`weight` float NOT NULL,
-	`bodyfat` float NOT NULL,
-	`neck` float NOT NULL,
-	`back` float NOT NULL,
-	`chest` float NOT NULL,
-	`shoulders` float NOT NULL,
-	`waist` float NOT NULL,
-	`left_arm` float NOT NULL,
-	`right_arm` float NOT NULL,
-	`left_forearm` float NOT NULL,
-	`right_forearm` float NOT NULL,
-	`left_quad` float NOT NULL,
-	`right_quad` float NOT NULL,
-	`date` datetime NOT NULL
+	`weight` float ,
+	`bodyfat` float ,
+	`neck` float ,
+	`back` float ,
+	`chest` float ,
+	`shoulders` float ,
+	`waist` float ,
+	`left_arm` float ,
+	`right_arm` float,
+	`left_forearm` float ,
+	`right_forearm` float,
+	`left_quad` float ,
+	`right_quad` float ,
+	`date` datetime 
 );
 
 

@@ -462,4 +462,34 @@ export default class Database {
 			return { past_workout_id: -1 };
 		}
 	}
+	//measurement logic
+	public async submitMeasurement(data: DatabaseTypes.Measurement) {
+		try {
+			const user_id = data.user_id;
+			if (!user_id || user_id < 0) {
+				throw new DatabaseIOError('Invalid user_id', 'database.ts::submitMeasurement');
+			}
+			const date = formatToMySQLDateTime(new Date());
+			data.date = date;
+			const id = randomizeNumber(6);
+			const query = `INSERT INTO measurements (measurement_id, user_id, weight, bodyfat, neck, back, chest, shoulders, waist, left_arm, right_arm, left_forearm, right_forearm, left_quad, right_quad, date) VALUES (${id}, ${user_id}, ${this.returnSQLValue(data.weight)}, ${this.returnSQLValue(data.bodyfat)}, ${this.returnSQLValue(data.neck)}, ${this.returnSQLValue(data.back)}, ${this.returnSQLValue(data.chest)}, ${this.returnSQLValue(data.shoulders)}, ${this.returnSQLValue(data.waist)}, ${this.returnSQLValue(data.left_arm)}, ${this.returnSQLValue(data.right_arm)}, ${this.returnSQLValue(data.left_forearm)}, ${this.returnSQLValue(data.right_forearm)}, ${this.returnSQLValue(data.left_quad)}, ${this.returnSQLValue(data.right_quad)}, '${date}')`
+			console.log(query);
+			await this.query(query);
+			const check = await this.atleastOne('SELECT * from measurements WHERE measurement_id = ' + id);
+			if (!check) throw new DatabaseError(500, 'Error logging measurement', 'database.ts::submitMeasurement');
+
+		}
+		catch (err: any) {
+			if (err instanceof DatabaseError) {
+				throw err
+			}
+		}
+	}
+
+	private returnSQLValue(value: any): string {
+		console.log(value);
+		if (value === undefined || value === null) return 'NULL';
+		return value;
+	}
 }
+
