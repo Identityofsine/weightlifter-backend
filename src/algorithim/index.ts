@@ -55,7 +55,6 @@ export function mysqlDatetimeToDate(datetimeString: string): Date | null {
 		// ISO 8601 datetime format ('YYYY-MM-DDTHH:MM:SS.fffZ')
 		dateObject = new Date(datetimeString);
 	} else {
-		console.error("Invalid datetime format");
 	}
 
 	return dateObject;

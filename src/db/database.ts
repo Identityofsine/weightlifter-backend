@@ -660,8 +660,8 @@ export default class Database {
 
 	public async getDataSet(user_id: number, id: string, type: 'exercise' | 'measurement') {
 
-		type T = DatabaseTypes.ExerciseLog & ExerciseMaxes;
-		function shouldNarrowExercise(a: T, b: T) {
+		type T = { [key: string]: any, date: string }
+		function shouldNarrow(a: T, b: T) {
 			if (!a.date || !b.date) return 0;
 			const date_a = mysqlDatetimeToDate(a.date);
 			const date_b = mysqlDatetimeToDate(b.date);
@@ -674,12 +674,11 @@ export default class Database {
 		try {
 			if (type === 'exercise') {
 				let exercises = await this.getExercisesByUser(user_id);
-				exercises.filter((exercise) => exercise.exercise_id === parseInt(id));
-
+				exercises = exercises.filter((exercise) => exercise.exercise_id === parseInt(id));
 				for (let i = 0; i < exercises.length - 1; i++) {
 					const exercise_a = exercises[i];
 					const exercise_b = exercises[i + 1];
-					if (shouldNarrowExercise(exercise_a, exercise_b) === 0) {
+					if (shouldNarrow(exercise_a, exercise_b) === 0) {
 						if (exercise_a.weight < exercise_b.weight) {
 							exercises.splice(i, 1);
 						} else {
@@ -688,19 +687,43 @@ export default class Database {
 						i--;
 					}
 				}
-
 				return exercises;
 			} else if (type === 'measurement') {
 				let measurements = await this.getMeasurements(user_id);
-				let measurement = measurements.find((measurement) => measurement.measurement_id === parseInt(id));
-				if (!measurement) throw new NotFoundError('Measurement not found', 'database.ts::getDataSet');
-				return measurement;
+				let measurement_list: RouteTypes.Dataset = [];
+				measurement_list = measurements.map((obj) => {
+					const measurement_keys = Object.keys(obj);
+					for (let i = 0; i < measurement_keys.length; i++) {
+						const key = measurement_keys[i];
+						//@ts-ignore
+						const value = obj[key];
+						if (key === id && value !== null) {
+							return { date: obj.date, value: value as number, metric: 'in' };
+						}
+					}
+					return { date: '', value: 0, metric: 'in' };
+				})
+				measurement_list.filter((measurement) => measurement.date !== '');
+				for (let i = 0; i < measurement_list.length - 1; i++) {
+					const measurement_a = measurement_list[i];
+					const measurement_b = measurement_list[i + 1];
+					if (shouldNarrow(measurement_a, measurement_b) === 0) {
+						if (measurement_a.value < measurement_b.value) {
+							measurement_list.splice(i, 1);
+						} else {
+							measurement_list.splice(i + 1, 1);
+						}
+						i--;
+					}
+				}
+
+				return measurement_list;
 			}
 			throw new DatabaseError(400, 'Invalid type', 'database.ts::getDataSet');
 		}
 		catch (err: any) {
 			if (err instanceof DatabaseError) throw err;
-			return {};
+			return [];
 		}
 	}
 }
