@@ -67,7 +67,7 @@ export namespace DatabaseTypes {
 		weight: number;
 		name: string;
 		sets: number;
-		finished: string;
+		date: string;
 	};
 
 }

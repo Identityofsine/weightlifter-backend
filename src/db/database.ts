@@ -493,7 +493,7 @@ export default class Database {
 			}
 			const measurement = await this.query<DatabaseTypes.Measurement[]>(`SELECT * FROM measurements WHERE user_id = ${user_id} ORDER BY date DESC`);
 			if (measurement.length === 0) {
-				throw new NotFoundError('Measurement not found', 'database.ts::getLatestMeasurement');
+				return { measurement_id: -1, user_id: -1, weight: 0, bodyfat: 0, neck: 0, back: 0, chest: 0, shoulders: 0, waist: 0, left_arm: 0, right_arm: 0, left_forearm: 0, right_forearm: 0, left_quad: 0, right_quad: 0, date: '' };
 			}
 
 			function searchForNonNullKey(key: keyof DatabaseTypes.Measurement, idx: number = 0) {
@@ -554,7 +554,7 @@ export default class Database {
 				throw new DatabaseIOError('Invalid user_id', 'database.ts::getExercisesByUser');
 			}
 
-			const query = `SELECT fus.*, past_workouts.finished FROM ( SELECT pes.*, exercise.name, exercise.sets FROM ( SELECT past_set.pe_id, past_set.set_id, past_exercise.exercise_id, past_exercise.workout_id, past_set.reps, past_set.weight FROM past_exercise INNER JOIN past_set ON past_set.pe_id = past_exercise.pe_id WHERE user_id = ${user_id}) AS pes INNER JOIN exercise ON exercise.exercise_id = pes.exercise_id) fus INNER JOIN past_workouts ON fus.workout_id = past_workouts.pw_id; `
+			const query = `SELECT fus.* FROM ( SELECT pes.*, exercise.name, exercise.sets FROM ( SELECT past_set.pe_id, past_set.set_id, past_exercise.exercise_id, past_exercise.workout_id, past_set.reps, past_set.date, past_set.weight FROM past_exercise INNER JOIN past_set ON past_set.pe_id = past_exercise.pe_id WHERE user_id = ${user_id}) AS pes INNER JOIN exercise ON exercise.exercise_id = pes.exercise_id) fus; `
 			let exercises = await this.query<(DatabaseTypes.ExerciseLog & ExerciseMaxes)[]>(query);
 
 			const calc_max = (reps: number, weight: number) => {
@@ -639,7 +639,9 @@ export default class Database {
 			return_value = [...exercises.map((exercise) => { return { key: exercise.exercise_id, value: exercise.name } })]
 
 			let measurements = await this.getLatestMeasurement(user_id);
+			if (measurements.measurement_id === -1) return return_value;
 			let measurement_keys = Object.keys(measurements);
+			if (measurements === undefined) return return_value;
 			for (let i = 0; i < measurement_keys.length; i++) {
 				const key = measurement_keys[i];
 				//@ts-ignore
@@ -652,7 +654,7 @@ export default class Database {
 			return return_value;
 		}
 		catch (err: any) {
-			throw new DatabaseError(500, 'Error getting trackables', 'database.ts::getAvailableTrackables');
+			throw new DatabaseError(500, `Error getting trackables (${err})`, 'database.ts::getAvailableTrackables');
 		}
 	}
 }
