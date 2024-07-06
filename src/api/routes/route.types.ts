@@ -29,4 +29,10 @@ export namespace RouteTypes {
 		value: string;
 	}
 
+	export type Dataset = {
+		date: string;
+		value: number;
+		metric: string;
+	}[]
+
 }

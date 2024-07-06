@@ -21,6 +21,7 @@ export namespace DatabaseTypes {
 		sets?: number;
 		reps?: number;
 		time_flag?: boolean;
+		date?: string;
 	}
 
 	export type Workout = {

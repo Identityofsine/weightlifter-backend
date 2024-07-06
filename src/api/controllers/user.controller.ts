@@ -119,4 +119,19 @@ export namespace UserController {
 		}
 	}
 
+	export async function getDataAnalytics(req: Request, res: Response) {
+		try {
+			const user_id = req.query['user_id'] as any as number;
+			const id = req.query['id'] as any as string;
+			const type = req.query['type'] as any as number; // 0 --> 1 measurement --> exercise
+			if (!user_id || isNaN(user_id) || !type || !id) {
+				throw new RouteIOError('User ID or ID or Type missing', 'user.controller.ts::getDataAnalytics');
+			}
+			const response = await db.getDataSet(user_id, id, type === 0 ? 'measurement' : 'exercise');
+			return res.status(200).json({ status: 200, message: 'Returned Analytics', success: true, analytics: response });
+		} catch (err: any) {
+			returnError(res, err);
+		}
+	}
+
 }

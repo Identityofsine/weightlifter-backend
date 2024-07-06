@@ -3,7 +3,7 @@ import { AlreadyExistsError, AuthenticationError, DatabaseError, DatabaseIOError
 import { DatabaseTypes } from './database.types';
 import nfc_hash from '../nfc';
 import { RouteTypes } from '../api/routes/route.types';
-import { formatToMySQLDateTime, formatToMySQLTime, randomizeNumber, randomizeString } from '../algorithim';
+import { formatToMySQLDateTime, formatToMySQLTime, mysqlDatetimeToDate, randomizeNumber, randomizeString } from '../algorithim';
 import Exercise from '../model/exercise';
 import { Workout, WorkoutInstances } from '../model/workout';
 import User from '../model/user';
@@ -655,6 +655,52 @@ export default class Database {
 		}
 		catch (err: any) {
 			throw new DatabaseError(500, `Error getting trackables (${err})`, 'database.ts::getAvailableTrackables');
+		}
+	}
+
+	public async getDataSet(user_id: number, id: string, type: 'exercise' | 'measurement') {
+
+		type T = DatabaseTypes.ExerciseLog & ExerciseMaxes;
+		function shouldNarrowExercise(a: T, b: T) {
+			if (!a.date || !b.date) return 0;
+			const date_a = mysqlDatetimeToDate(a.date);
+			const date_b = mysqlDatetimeToDate(b.date);
+			if (!date_a || !date_b) return 0;
+			//throw out if the dates are the same by the same day 
+			if (date_a.getDate() === date_b.getDate() && date_a.getMonth() === date_b.getMonth() && date_a.getFullYear() === date_b.getFullYear()) return 0;
+			return 1;
+		}
+
+		try {
+			if (type === 'exercise') {
+				let exercises = await this.getExercisesByUser(user_id);
+				exercises.filter((exercise) => exercise.exercise_id === parseInt(id));
+
+				for (let i = 0; i < exercises.length - 1; i++) {
+					const exercise_a = exercises[i];
+					const exercise_b = exercises[i + 1];
+					if (shouldNarrowExercise(exercise_a, exercise_b) === 0) {
+						if (exercise_a.weight < exercise_b.weight) {
+							exercises.splice(i, 1);
+						} else {
+							exercises.splice(i + 1, 1);
+						}
+						i--;
+					}
+				}
+
+				return exercises;
+			} else if (type === 'measurement') {
+				let measurements = await this.getMeasurements(user_id);
+				let measurement = measurements.find((measurement) => measurement.measurement_id === parseInt(id));
+				if (!measurement) throw new NotFoundError('Measurement not found', 'database.ts::getDataSet');
+				return measurement;
+			}
+			throw new DatabaseError(400, 'Invalid type', 'database.ts::getDataSet');
+		}
+		catch (err: any) {
+			if (err instanceof DatabaseError) throw err;
+			return {};
 		}
 	}
 }

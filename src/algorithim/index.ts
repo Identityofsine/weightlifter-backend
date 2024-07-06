@@ -25,35 +25,38 @@ export function formatToMySQLDateTime(date: Date) {
 	return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
-export function mysqlDatetimeToDate(mysqlDatetime: string): Date | null {
-	// MySQL datetime format: 'YYYY-MM-DD HH:MM:SS' (e.g., '2024-07-05 15:30:00')
+export function mysqlDatetimeToDate(datetimeString: string): Date | null {
+	// Check if the input is in MySQL datetime format ('YYYY-MM-DD HH:MM:SS')
+	const mysqlDatetimeRegex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
 
-	// Check if the input is a valid datetime string
-	const datetimeRegex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
-	if (!datetimeRegex.test(mysqlDatetime)) {
-		console.error("Invalid MySQL datetime format");
-		return null;
+	// Check if the input is in ISO 8601 datetime format ('YYYY-MM-DDTHH:MM:SS.fffZ')
+	const isoDatetimeRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/;
+
+	let dateObject: Date | null = null;
+
+	if (mysqlDatetimeRegex.test(datetimeString)) {
+		// MySQL datetime format ('YYYY-MM-DD HH:MM:SS')
+		const parts = datetimeString.split(' ');
+		const datePart = parts[0];
+		const timePart = parts[1];
+
+		const dateParts = datePart.split('-');
+		const year = parseInt(dateParts[0], 10);
+		const month = parseInt(dateParts[1], 10) - 1; // Months are 0-indexed in JavaScript
+		const day = parseInt(dateParts[2], 10);
+
+		const timeParts = timePart.split(':');
+		const hours = parseInt(timeParts[0], 10);
+		const minutes = parseInt(timeParts[1], 10);
+		const seconds = parseInt(timeParts[2], 10);
+
+		dateObject = new Date(year, month, day, hours, minutes, seconds);
+	} else if (isoDatetimeRegex.test(datetimeString)) {
+		// ISO 8601 datetime format ('YYYY-MM-DDTHH:MM:SS.fffZ')
+		dateObject = new Date(datetimeString);
+	} else {
+		console.error("Invalid datetime format");
 	}
-
-	// Split datetime string into date and time parts
-	const parts = mysqlDatetime.split(' ');
-	const datePart = parts[0];
-	const timePart = parts[1];
-
-	// Split date part into year, month, and day
-	const dateParts = datePart.split('-');
-	const year = parseInt(dateParts[0], 10);
-	const month = parseInt(dateParts[1], 10) - 1; // Months are 0-indexed in JavaScript
-	const day = parseInt(dateParts[2], 10);
-
-	// Split time part into hours, minutes, and seconds
-	const timeParts = timePart.split(':');
-	const hours = parseInt(timeParts[0], 10);
-	const minutes = parseInt(timeParts[1], 10);
-	const seconds = parseInt(timeParts[2], 10);
-
-	// Create a new Date object
-	const dateObject = new Date(year, month, day, hours, minutes, seconds);
 
 	return dateObject;
 }

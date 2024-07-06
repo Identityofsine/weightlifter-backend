@@ -10,5 +10,7 @@ UserRouter.get('/latest', UserController.getLatestMeasurements);
 UserRouter.get('/getmeasurements', UserController.getMeasurements);
 UserRouter.get('/pastexercise', UserController.getPastExercises);
 UserRouter.get('/possibleanalytics', UserController.getPossibleAnalytics);
+UserRouter.get('/dataset', UserController.getDataAnalytics);
+
 
 export { UserRouter };
