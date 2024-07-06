@@ -73,7 +73,8 @@ CREATE TABLE `past_set` (
 	`set_id` integer PRIMARY KEY NOT NULL AUTO_INCREMENT,
 	`pe_id` integer NOT NULL,
 	`weight` float NOT NULL,
-	`reps` integer NOT NULL
+	`reps` integer NOT NULL,
+	`date` datetime NOT NULL
 );
 
 CREATE TABLE `measurements` (

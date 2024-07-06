@@ -59,4 +59,15 @@ export namespace DatabaseTypes {
 		right_quad: number;
 	}>
 
+	export type ExerciseLog = {
+		pe_id: number;
+		set_id: number;
+		exercise_id: number;
+		reps: number;
+		weight: number;
+		name: string;
+		sets: number;
+		finished: string;
+	};
+
 }

@@ -11,6 +11,7 @@ class Exercise implements Omit {
 	private sets_done: number = 0;
 	private reps_done: number[] = [];
 	private weight_done: number[] = [];
+	private time_done: Date[] = [];
 
 
 	constructor(exercise_id: number, name: string, description: string, sets: number, reps?: number, time_flag?: boolean) {
@@ -27,6 +28,7 @@ class Exercise implements Omit {
 	public set weight(weight: number) {
 		const idx = (this.sets_done - 1 >= 0) ? this.sets_done - 1 : 0;
 		this.weight_done[idx] = weight;
+		this.time_done[idx] = new Date();
 	}
 
 	public set setsDone(sets_done: number) {
@@ -36,6 +38,7 @@ class Exercise implements Omit {
 	public set repsDone(reps_done: number) {
 		const idx = (this.sets_done - 1 >= 0) ? this.sets_done - 1 : 0;
 		this.reps_done[idx] = reps_done;
+		this.time_done[idx] = new Date();
 	}
 
 	public get setsDone(): number {
@@ -48,6 +51,10 @@ class Exercise implements Omit {
 
 	public get weight(): number[] {
 		return this.weight_done;
+	}
+
+	public get time(): Date[] {
+		return this.time_done;
 	}
 
 	public repsOfSet(set: number): number {
@@ -98,7 +105,8 @@ class Exercise implements Omit {
 			description: this.description,
 			sets_done: this.sets_done,
 			reps_done: this.reps_done,
-			weight_done: this.weight_done
+			weight_done: this.weight_done,
+			time_done: this.time_done,
 		};
 	}
 }

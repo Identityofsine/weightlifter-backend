@@ -5,7 +5,7 @@ import nfc_hash from '../nfc';
 import { RouteTypes } from '../api/routes/route.types';
 import { formatToMySQLDateTime, formatToMySQLTime, randomizeNumber, randomizeString } from '../algorithim';
 import Exercise from '../model/exercise';
-import { Workout } from '../model/workout';
+import { Workout, WorkoutInstances } from '../model/workout';
 import User from '../model/user';
 
 export default class Database {
@@ -451,7 +451,8 @@ export default class Database {
 					for (let z = 0; z < exercise.setsDone; z++) {
 						const reps = exercise.repsDone[z];
 						const weight = exercise.weight[z];
-						await this.query(`INSERT INTO past_set (pe_id, weight, reps) VALUES (${pe_id}, ${weight}, ${reps})`);
+						const set_date = formatToMySQLDateTime(exercise.time[z]);
+						await this.query(`INSERT INTO past_set (pe_id, weight, reps, date) VALUES (${pe_id}, ${weight}, ${reps}, '${set_date}')`);
 					}
 				}
 			}
@@ -473,7 +474,6 @@ export default class Database {
 			data.date = date;
 			const id = randomizeNumber(6);
 			const query = `INSERT INTO measurements (measurement_id, user_id, weight, bodyfat, neck, back, chest, shoulders, waist, left_arm, right_arm, left_forearm, right_forearm, left_quad, right_quad, date) VALUES (${id}, ${user_id}, ${this.returnSQLValue(data.weight)}, ${this.returnSQLValue(data.bodyfat)}, ${this.returnSQLValue(data.neck)}, ${this.returnSQLValue(data.back)}, ${this.returnSQLValue(data.chest)}, ${this.returnSQLValue(data.shoulders)}, ${this.returnSQLValue(data.waist)}, ${this.returnSQLValue(data.left_arm)}, ${this.returnSQLValue(data.right_arm)}, ${this.returnSQLValue(data.left_forearm)}, ${this.returnSQLValue(data.right_forearm)}, ${this.returnSQLValue(data.left_quad)}, ${this.returnSQLValue(data.right_quad)}, '${date}')`
-			console.log(query);
 			await this.query(query);
 			const check = await this.atleastOne('SELECT * from measurements WHERE measurement_id = ' + id);
 			if (!check) throw new DatabaseError(500, 'Error logging measurement', 'database.ts::submitMeasurement');
@@ -486,10 +486,186 @@ export default class Database {
 		}
 	}
 
+	public async getLatestMeasurement(user_id: number): Promise<DatabaseTypes.Measurement> {
+		try {
+			if (!user_id || user_id < 0) {
+				throw new DatabaseIOError('Invalid user_id', 'database.ts::getLatestMeasurement');
+			}
+			const measurement = await this.query<DatabaseTypes.Measurement[]>(`SELECT * FROM measurements WHERE user_id = ${user_id} ORDER BY date DESC`);
+			if (measurement.length === 0) {
+				throw new NotFoundError('Measurement not found', 'database.ts::getLatestMeasurement');
+			}
+
+			function searchForNonNullKey(key: keyof DatabaseTypes.Measurement, idx: number = 0) {
+				for (let i = idx; i < measurement.length; i++) {
+					if (measurement[i][key] !== null && measurement[i][key] !== undefined) return i;
+				}
+			}
+
+			let measurement_obj: DatabaseTypes.Measurement = { ...measurement[0] };
+			for (let _key in measurement_obj) {
+				const key = _key as keyof DatabaseTypes.Measurement;
+				if (measurement_obj[key] === null) {
+					const idx = searchForNonNullKey(key as keyof DatabaseTypes.Measurement);
+					if (idx !== undefined) {
+						//@ts-ignore
+						measurement_obj[key] = measurement[idx][key];
+					}
+				}
+			}
+
+			return measurement_obj;
+
+		} catch (err: any) {
+			if (err instanceof DatabaseError) {
+				throw err;
+			}
+			return { measurement_id: -1, user_id: -1, weight: 0, bodyfat: 0, neck: 0, back: 0, chest: 0, shoulders: 0, waist: 0, left_arm: 0, right_arm: 0, left_forearm: 0, right_forearm: 0, left_quad: 0, right_quad: 0, date: '' };
+		}
+	}
+
+	public async getMeasurements(user_id: number, limit: number = 0): Promise<DatabaseTypes.Measurement[]> {
+		try {
+			const measurements = await this.query<DatabaseTypes.Measurement[]>(`SELECT * FROM measurements WHERE user_id = ${user_id} ORDER BY date DESC ${limit > 0 ? 'LIMIT ' + limit : ''}`);
+
+			return measurements;
+		}
+		catch (err: any) {
+			if (err instanceof DatabaseError) {
+				throw err;
+			}
+			return [];
+		}
+	}
+
 	private returnSQLValue(value: any): string {
-		console.log(value);
 		if (value === undefined || value === null) return 'NULL';
 		return value;
 	}
+
+	//past exericse block
+	//
+
+
+
+	public async getExercisesByUser(user_id: number): Promise<(DatabaseTypes.ExerciseLog & ExerciseMaxes)[]> {
+		try {
+			if (!user_id || user_id < 0) {
+				throw new DatabaseIOError('Invalid user_id', 'database.ts::getExercisesByUser');
+			}
+
+			const query = `SELECT fus.*, past_workouts.finished FROM ( SELECT pes.*, exercise.name, exercise.sets FROM ( SELECT past_set.pe_id, past_set.set_id, past_exercise.exercise_id, past_exercise.workout_id, past_set.reps, past_set.weight FROM past_exercise INNER JOIN past_set ON past_set.pe_id = past_exercise.pe_id WHERE user_id = ${user_id}) AS pes INNER JOIN exercise ON exercise.exercise_id = pes.exercise_id) fus INNER JOIN past_workouts ON fus.workout_id = past_workouts.pw_id; `
+			let exercises = await this.query<(DatabaseTypes.ExerciseLog & ExerciseMaxes)[]>(query);
+
+			const calc_max = (reps: number, weight: number) => {
+				return Math.abs(Math.floor(weight / (1.0278 - 0.0278 * reps)));
+			}
+
+			type max = {
+				exercise_id: number;
+				value: number;
+			}
+
+			//theoretical maxes
+			let orp_max: max[] = []; //1rm
+			let frp_max: max[] = []; //5rm
+			let twp_max: max[] = []; //12rm
+			for (let i = 0; i < exercises.length; i++) {
+				const exercise = exercises[i];
+				const reps = exercise.reps;
+				const weight = exercise.weight;
+				const orp = calc_max(reps, weight);
+				const frp = Math.floor(orp * 0.88);
+				const twp = Math.floor(orp * 0.70);
+
+				const orp_max_idx = orp_max.findIndex((max) => max.exercise_id === exercise.exercise_id);
+				const frp_max_idx = frp_max.findIndex((max) => max.exercise_id === exercise.exercise_id);
+				const twp_max_idx = twp_max.findIndex((max) => max.exercise_id === exercise.exercise_id);
+				if (orp_max_idx === -1) orp_max.push({ exercise_id: exercise.exercise_id, value: orp });
+				else if (orp > orp_max[orp_max_idx].value) orp_max[orp_max_idx].value = orp;
+				if (frp_max_idx === -1) frp_max.push({ exercise_id: exercise.exercise_id, value: frp });
+				else if (frp > frp_max[frp_max_idx].value) frp_max[frp_max_idx].value = frp;
+				if (twp_max_idx === -1) twp_max.push({ exercise_id: exercise.exercise_id, value: twp });
+				else if (twp > twp_max[twp_max_idx].value) twp_max[twp_max_idx].value = twp;
+
+
+				exercises[i] = {
+					...exercises[i],
+					max: {
+						one_rep: orp,
+						five_rep: frp,
+						twelve_rep: twp,
+						therotical_one_rep: 0,
+						therotical_five_rep: 0,
+						thertical_twelve_rep: 0,
+					}
+				}
+			}
+
+			//update the maxes
+			for (let i = 0; i < exercises.length; i++) {
+				const exercise = exercises[i];
+				const orp_max_idx = orp_max.findIndex((max) => max.exercise_id === exercise.exercise_id);
+				const frp_max_idx = frp_max.findIndex((max) => max.exercise_id === exercise.exercise_id);
+				const twp_max_idx = twp_max.findIndex((max) => max.exercise_id === exercise.exercise_id);
+				if (orp_max_idx !== -1 && frp_max_idx !== -1 && twp_max_idx !== -1)
+					exercise.max = {
+						...exercise.max,
+						therotical_one_rep: orp_max[orp_max_idx].value,
+						therotical_five_rep: frp_max[frp_max_idx].value,
+						thertical_twelve_rep: twp_max[twp_max_idx].value,
+					};
+				else {
+					throw new DatabaseIOError('Error calculating maxes', 'database.ts::getExercisesByUser');
+				}
+			}
+
+
+			return exercises;
+		} catch (err: any) {
+			console.log(err);
+			throw new DatabaseError(500, 'Error getting exercises by user', 'database.ts::getExercisesByUser');
+		}
+	}
+
+	//analytics
+
+	public async getAvailableTrackables(user_id: number): Promise<RouteTypes.TrackableMetric[]> {
+		try {
+			let return_value: RouteTypes.TrackableMetric[] = [];
+			const query = `SELECT DISTINCT exercise.exercise_id, exercise.name FROM ( SELECT DISTINCT past_set.pe_id, past_set.set_id, past_exercise.exercise_id, past_set.reps, past_set.weight FROM past_exercise INNER JOIN past_set ON past_set.pe_id = past_exercise.pe_id WHERE user_id = ${user_id}) AS pes INNER JOIN exercise ON exercise.exercise_id = pes.exercise_id ;`
+			//exericse block
+			let exercises = await this.query<({ exercise_id: number, name: string })[]>(query);
+			return_value = [...exercises.map((exercise) => { return { key: exercise.exercise_id, value: exercise.name } })]
+
+			let measurements = await this.getLatestMeasurement(user_id);
+			let measurement_keys = Object.keys(measurements);
+			for (let i = 0; i < measurement_keys.length; i++) {
+				const key = measurement_keys[i];
+				//@ts-ignore
+				const value = measurements[key];
+				if (measurement_keys[i] === 'measurement_id' || measurement_keys[i] === 'user_id' || measurement_keys[i] === 'date') continue;
+				if (value === null) continue;
+				return_value.push({ key: key, value: key.split('_').map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') });
+			}
+
+			return return_value;
+		}
+		catch (err: any) {
+			throw new DatabaseError(500, 'Error getting trackables', 'database.ts::getAvailableTrackables');
+		}
+	}
 }
 
+
+
+type ExerciseMaxes = {
+	max: {
+		one_rep: number;
+		five_rep: number;
+		twelve_rep: number;
+		therotical_one_rep: number;
+		therotical_five_rep: number;
+		thertical_twelve_rep: number;
+	}
+}

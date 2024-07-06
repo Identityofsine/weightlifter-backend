@@ -6,5 +6,9 @@ const UserRouter = express.Router();
 
 UserRouter.post('/login', UserController.login);
 UserRouter.post('/measure', UserController.logMeasurement);
+UserRouter.get('/latest', UserController.getLatestMeasurements);
+UserRouter.get('/getmeasurements', UserController.getMeasurements);
+UserRouter.get('/pastexercise', UserController.getPastExercises);
+UserRouter.get('/possibleanalytics', UserController.getPossibleAnalytics);
 
 export { UserRouter };

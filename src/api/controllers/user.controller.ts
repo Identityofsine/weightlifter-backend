@@ -9,7 +9,6 @@ export namespace UserController {
 	export async function login(req: Request, res: Response) {
 		try {
 			const { username, password, nfc_key } = req.body;
-			console.log(req.body)
 			if ((!username || !password) && !nfc_key) {
 				throw new RouteIOError('Username or Password not provided', 'user.controller.ts::login');
 			} else if (username && password && nfc_key) {
@@ -54,6 +53,68 @@ export namespace UserController {
 			return res.status(200).json({ status: 200, message: 'Measurement logged successfully', success: true, response });
 		}
 		catch (err: any) {
+			returnError(res, err);
+		}
+	}
+
+
+	export async function getLatestMeasurements(req: Request, res: Response) {
+		try {
+			const user_id = req.query['user_id'] as any as number;
+			if (!user_id || isNaN(user_id)) {
+				throw new RouteIOError('User ID', 'user.controller.ts::logMeasurement');
+			}
+			const response = await db.getLatestMeasurement(user_id);
+			return res.status(200).json({ status: 200, message: 'Measurement logged successfully', success: true, measurement: response });
+		}
+		catch (err: any) {
+			returnError(res, err);
+		}
+	}
+
+	export async function getMeasurements(req: Request, res: Response) {
+		try {
+			const user_id = req.query['user_id'] as any as number;
+			const limit = req.query['limit'] as any as number;
+			if (!user_id || isNaN(user_id)) {
+				throw new RouteIOError('User ID', 'user.controller.ts::getMeasurements');
+			}
+			if (limit && isNaN(limit)) {
+				throw new RouteIOError('Limit isn\'t a number', 'user.controller.ts::getMeasurements');
+			}
+			const response = await db.getMeasurements(user_id, limit ?? 0);
+			return res.status(200).json({ status: 200, message: 'Measurement logged successfully', success: true, measurements: response });
+		} catch (err: any) {
+			returnError(res, err);
+		}
+	}
+
+	export async function getPastExercises(req: Request, res: Response) {
+		try {
+			const user_id = req.query['user_id'] as any as number;
+			const limit = req.query['limit'] as any as number;
+			if (!user_id || isNaN(user_id)) {
+				throw new RouteIOError('User ID', 'user.controller.ts::getPastExercises');
+			}
+			if (limit && isNaN(limit)) {
+				throw new RouteIOError('Limit isn\'t a number', 'user.controller.ts::getPastExercises');
+			}
+			const response = await db.getExercisesByUser(user_id);
+			return res.status(200).json({ status: 200, message: 'Returned Exercises', success: true, exercises: response });
+		} catch (err: any) {
+			returnError(res, err);
+		}
+	}
+
+	export async function getPossibleAnalytics(req: Request, res: Response) {
+		try {
+			const user_id = req.query['user_id'] as any as number;
+			if (!user_id || isNaN(user_id)) {
+				throw new RouteIOError('User ID', 'user.controller.ts::getPossibleAnalytics');
+			}
+			const response = await db.getAvailableTrackables(user_id);
+			return res.status(200).json({ status: 200, message: 'Returned Analytics', success: true, analytics: response });
+		} catch (err: any) {
 			returnError(res, err);
 		}
 	}

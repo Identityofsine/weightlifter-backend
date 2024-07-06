@@ -24,3 +24,36 @@ export function formatToMySQLDateTime(date: Date) {
 	const seconds = String(date.getSeconds()).padStart(2, '0');
 	return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
+
+export function mysqlDatetimeToDate(mysqlDatetime: string): Date | null {
+	// MySQL datetime format: 'YYYY-MM-DD HH:MM:SS' (e.g., '2024-07-05 15:30:00')
+
+	// Check if the input is a valid datetime string
+	const datetimeRegex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
+	if (!datetimeRegex.test(mysqlDatetime)) {
+		console.error("Invalid MySQL datetime format");
+		return null;
+	}
+
+	// Split datetime string into date and time parts
+	const parts = mysqlDatetime.split(' ');
+	const datePart = parts[0];
+	const timePart = parts[1];
+
+	// Split date part into year, month, and day
+	const dateParts = datePart.split('-');
+	const year = parseInt(dateParts[0], 10);
+	const month = parseInt(dateParts[1], 10) - 1; // Months are 0-indexed in JavaScript
+	const day = parseInt(dateParts[2], 10);
+
+	// Split time part into hours, minutes, and seconds
+	const timeParts = timePart.split(':');
+	const hours = parseInt(timeParts[0], 10);
+	const minutes = parseInt(timeParts[1], 10);
+	const seconds = parseInt(timeParts[2], 10);
+
+	// Create a new Date object
+	const dateObject = new Date(year, month, day, hours, minutes, seconds);
+
+	return dateObject;
+}
