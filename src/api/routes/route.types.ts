@@ -27,6 +27,7 @@ export namespace RouteTypes {
 	export type TrackableMetric = {
 		key: string | number; //should be traced back to the exercise
 		value: string;
+		type: 'measurement' | 'exercise';
 	}
 
 	export type Dataset = {

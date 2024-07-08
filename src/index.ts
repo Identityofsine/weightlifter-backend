@@ -5,13 +5,16 @@ import database from './db/database';
 import { IndexRouter } from './api/routes/index.route';
 import cors from 'cors';
 import corsOptions from './config/cors';
+import dotenv from 'dotenv';
+import { FileManager } from './os/file';
 
+dotenv.config();
 
 const app = express();
 app.use(express.json());
 app.use(bodyParser.json());
 const db = database.getInstance();
-
+FileManager.getInstance();
 
 app.use(cors(corsOptions));
 

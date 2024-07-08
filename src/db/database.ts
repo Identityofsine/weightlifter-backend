@@ -635,8 +635,9 @@ export default class Database {
 			let return_value: RouteTypes.TrackableMetric[] = [];
 			const query = `SELECT DISTINCT exercise.exercise_id, exercise.name FROM ( SELECT DISTINCT past_set.pe_id, past_set.set_id, past_exercise.exercise_id, past_set.reps, past_set.weight FROM past_exercise INNER JOIN past_set ON past_set.pe_id = past_exercise.pe_id WHERE user_id = ${user_id}) AS pes INNER JOIN exercise ON exercise.exercise_id = pes.exercise_id ;`
 			//exericse block
-			let exercises = await this.query<({ exercise_id: number, name: string })[]>(query);
-			return_value = [...exercises.map((exercise) => { return { key: exercise.exercise_id, value: exercise.name } })]
+			let exercises = await this.query<any[]>(query);
+			//@ts-ignore
+			return_value = [...exercises.map((exercise) => { return { key: exercise.exercise_id, value: exercise.name, type: 'measurement' } })]
 
 			let measurements = await this.getLatestMeasurement(user_id);
 			if (measurements.measurement_id === -1) return return_value;
@@ -648,7 +649,7 @@ export default class Database {
 				const value = measurements[key];
 				if (measurement_keys[i] === 'measurement_id' || measurement_keys[i] === 'user_id' || measurement_keys[i] === 'date') continue;
 				if (value === null) continue;
-				return_value.push({ key: key, value: key.split('_').map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') });
+				return_value.push({ key: key, value: key.split('_').map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' '), type: 'exercise' });
 			}
 
 			return return_value;
@@ -663,11 +664,12 @@ export default class Database {
 		type T = { [key: string]: any, date: string }
 		function shouldNarrow(a: T, b: T) {
 			if (!a.date || !b.date) return 0;
-			const date_a = mysqlDatetimeToDate(a.date);
-			const date_b = mysqlDatetimeToDate(b.date);
+			const date_a = new Date(a.date);
+			const date_b = new Date(b.date);
 			if (!date_a || !date_b) return 0;
-			//throw out if the dates are the same by the same day 
-			if (date_a.getDate() === date_b.getDate() && date_a.getMonth() === date_b.getMonth() && date_a.getFullYear() === date_b.getFullYear()) return 0;
+			//check if the same
+			if (date_a.getDay() === date_b.getDay() && date_a.getMonth() == date_b.getMonth() && date_a.getDate() == date_b.getDate() && date_a.getFullYear() == date_b.getFullYear())
+				return 0;
 			return 1;
 		}
 
@@ -679,6 +681,7 @@ export default class Database {
 					const exercise_a = exercises[i];
 					const exercise_b = exercises[i + 1];
 					if (shouldNarrow(exercise_a, exercise_b) === 0) {
+						//check the greatest
 						if (exercise_a.weight < exercise_b.weight) {
 							exercises.splice(i, 1);
 						} else {
@@ -687,7 +690,10 @@ export default class Database {
 						i--;
 					}
 				}
-				return exercises;
+				if (exercises.length === 0) return [];
+				const e = exercises.map((exercise) => { return { date: exercise.date, value: exercise.weight, metric: 'lbs' } });
+				exercises = exercises.filter((exercise) => exercise.date !== '');
+				return e;
 			} else if (type === 'measurement') {
 				let measurements = await this.getMeasurements(user_id);
 				let measurement_list: RouteTypes.Dataset = [];
@@ -703,12 +709,16 @@ export default class Database {
 					}
 					return { date: '', value: 0, metric: 'in' };
 				})
-				measurement_list.filter((measurement) => measurement.date !== '');
+				measurement_list = measurement_list.filter((measurement) => measurement.date !== '');
+				if (measurement_list.length === 0) return [];
 				for (let i = 0; i < measurement_list.length - 1; i++) {
 					const measurement_a = measurement_list[i];
 					const measurement_b = measurement_list[i + 1];
 					if (shouldNarrow(measurement_a, measurement_b) === 0) {
-						if (measurement_a.value < measurement_b.value) {
+						//get newest 
+						const date_a = new Date(measurement_a.date);
+						const date_b = new Date(measurement_b.date);
+						if (date_a.getTime() < date_b.getTime()) {
 							measurement_list.splice(i, 1);
 						} else {
 							measurement_list.splice(i + 1, 1);
@@ -716,8 +726,7 @@ export default class Database {
 						i--;
 					}
 				}
-
-				return measurement_list;
+				return measurement_list.reverse();
 			}
 			throw new DatabaseError(400, 'Invalid type', 'database.ts::getDataSet');
 		}
