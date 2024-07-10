@@ -123,7 +123,7 @@ export default class Database {
 			if (err instanceof DatabaseError) {
 				throw err;
 			}
-			return { user_id: -1, username: '', password: '', name: '', nfc_key: '', permission: 0 };
+			return { user_id: -1, username: '', password: '', name: '', nfc_key: '', permission: 0, pfp_id: -1 };
 		}
 	}
 
@@ -141,7 +141,7 @@ export default class Database {
 			if (err instanceof NotFoundError) {
 				throw err;
 			}
-			return { user_id: -1, username: '', password: '', name: '', nfc_key: '', permission: 0 };
+			return { user_id: -1, username: '', password: '', name: '', nfc_key: '', permission: 0, pfp_id: -1 };
 		}
 	}
 
@@ -164,10 +164,11 @@ export default class Database {
 			if (err instanceof DatabaseError) {
 				throw err;
 			}
-			return { user_id: -1, username: '', password: '', name: "", nfc_key: '', permission: 0 };
+			return { user_id: -1, username: '', password: '', name: "", nfc_key: '', permission: 0, pfp_id: -1 };
 		}
 	}
 
+	//setPFP
 	public async setPFP(user_id: string, pfp: string): Promise<boolean> {
 		try {
 			user_id = await this.escape(user_id) as string;
@@ -186,6 +187,27 @@ export default class Database {
 				throw err;
 			}
 			return false;
+		}
+	}
+
+	public async getPFP(user_id: string): Promise<DatabaseTypes.Image> {
+		try {
+			user_id = await this.escape(user_id) as string;
+			const user_exists = await this.atleastOne(`SELECT * FROM user WHERE user_id = ${user_id}`);
+			if (!user_exists) {
+				throw new NotFoundError('User not found', 'database.ts::getPFP');
+			}
+			const user = await this.getUserById(parseInt(user_id));
+			const pfp = await this.query<DatabaseTypes.Image[]>(`SELECT * FROM image WHERE image_id = ${user.pfp_id}`);
+			if (!pfp || pfp.length === 0) {
+				throw new NotFoundError('PFP not found', 'database.ts::getPFP');
+			}
+			return pfp[0];
+		} catch (err: any) {
+			if (err instanceof DatabaseError) {
+				throw err;
+			}
+			return { image_id: -1, user_id: -1, file_id: '' };
 		}
 	}
 
