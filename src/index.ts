@@ -8,13 +8,13 @@ import corsOptions from './config/cors';
 import dotenv from 'dotenv';
 import { FileManager } from './os/file';
 
+FileManager.getInstance();
 dotenv.config();
 
 const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(bodyParser.json());
 const db = database.getInstance();
-FileManager.getInstance();
 
 app.use(cors(corsOptions));
 

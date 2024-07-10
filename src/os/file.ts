@@ -1,3 +1,4 @@
+import { configDotenv } from "dotenv";
 import { FileIOError, FileNotFoundError } from "./file.error";
 import fs from 'fs';
 
@@ -8,6 +9,7 @@ export class FileManager {
 	private readonly userImagePath: string;
 
 	private constructor() {
+		configDotenv();
 		if (!process.env.FILE_PATH) {
 			throw new FileIOError('FILE_PATH not set', 'FileManager');
 		}
