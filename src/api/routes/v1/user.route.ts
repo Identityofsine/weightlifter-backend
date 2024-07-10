@@ -12,5 +12,8 @@ UserRouter.get('/pastexercise', UserController.getPastExercises);
 UserRouter.get('/possibleanalytics', UserController.getPossibleAnalytics);
 UserRouter.get('/dataset', UserController.getDataAnalytics);
 
+//increase the post size limit to 50mb 
+UserRouter.post('/setpfp', UserController.setPFP);
+
 
 export { UserRouter };

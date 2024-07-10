@@ -168,6 +168,28 @@ export default class Database {
 		}
 	}
 
+	public async setPFP(user_id: string, pfp: string): Promise<boolean> {
+		try {
+			user_id = await this.escape(user_id) as string;
+			pfp = await this.escape(pfp) as string;
+			const user_exists = await this.atleastOne(`SELECT * FROM user WHERE user_id = ${user_id}`);
+			if (!user_exists) {
+				throw new NotFoundError('User not found', 'database.ts::setPFP');
+			}
+			const pfp_id = randomizeNumber(6);
+			await this.query(`INSERT INTO image (image_id, user_id, filename) VALUES (${pfp_id}, ${user_id}, ${pfp})`);
+			await this.query(`UPDATE user SET pfp_id = ${pfp_id} WHERE user_id = ${user_id}`);
+			return true;
+		}
+		catch (err: any) {
+			if (err instanceof DatabaseError) {
+				throw err;
+			}
+			return false;
+		}
+	}
+
+
 	//FIX: change to bcrypt later
 	public async authenticateUser(username?: string, password?: string, nfc?: string): Promise<DatabaseTypes.User | false> {
 		try {

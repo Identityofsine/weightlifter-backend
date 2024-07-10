@@ -17,10 +17,11 @@ CREATE TABLE `user` (
 	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE `pfp` (
-	`pfp_id` integer PRIMARY KEY NOT NULL AUTO_INCREMENT,
-	`user_id` integer NOT NULL,
-	`path` VARCHAR(1024) NOT NULL
+
+CREATE TABLE `image` (
+	`image_id` integer PRIMARY KEY NOT NULL AUTO_INCREMENT,
+	`user_id` integer NOT NULL, -- owner
+	`filename` VARCHAR(1024) NOT NULL
 );
 
 CREATE TABLE `workout` (
@@ -112,7 +113,7 @@ ALTER TABLE `user_auth` ADD FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`)
 
 ALTER TABLE `past_set` ADD FOREIGN KEY (`pe_id`) REFERENCES `past_exercise`(`pe_id`);
 
-ALTER TABLE `pfp` ADD FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`);
+ALTER TABLE `image` ADD FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`);
 
 -- demo data
 

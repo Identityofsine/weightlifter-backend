@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { RouteError, RouteIOError, returnError } from '../routes/route.error';
 import Database from '../../db/database';
+import { FileManager } from '../../os/file';
+import { FileError } from '../../os/file.error';
 
 const db = Database.getInstance();
 
@@ -42,6 +44,23 @@ export namespace UserController {
 			returnError(res, err);
 		}
 	}
+
+	export async function setPFP(req: Request, res: Response) {
+		try {
+			//check if user_id is provided and authenticated
+			const { user_id, pfp } = req.body;
+			if (!user_id || !pfp) {
+				throw new RouteIOError('User ID or PFP not provided', 'user.controller.ts::setPFP');
+			}
+			const file_id = FileManager.getInstance().saveIntoUser(user_id, pfp, 'png');
+			await db.setPFP(user_id, file_id);
+			return res.status(200).json({ status: 200, message: 'PFP set successfully', success: true, file_id });
+		} catch (err: any) {
+
+			returnError(res, err);
+		}
+	}
+
 
 	export async function logMeasurement(req: Request, res: Response) {
 		try {

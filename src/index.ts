@@ -11,7 +11,7 @@ import { FileManager } from './os/file';
 dotenv.config();
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 app.use(bodyParser.json());
 const db = database.getInstance();
 FileManager.getInstance();
@@ -21,6 +21,7 @@ app.use(cors(corsOptions));
 app.get('/', (_req, res) => {
 	res.send('Weightlifter app');
 });
+
 
 app.use('/', IndexRouter);
 

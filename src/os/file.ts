@@ -35,7 +35,8 @@ export class FileManager {
 		path = this.escape(path);
 		console.log('[FileManager]: Loading file at %s ...', path);
 		try {
-			const file = fs.readFileSync(path, 'utf8')
+			//read file into buffer
+			const file = fs.readFileSync(path, 'utf8');
 			return file;
 		} catch (err) {
 			throw new FileNotFoundError(`${path} not found.`, 'FileManager');
@@ -43,13 +44,47 @@ export class FileManager {
 	}
 
 	// Save a file to the file system
-	public saveFile(path: string, file: string) {
+	public saveFile(path: string, file: string, ext: 'png' | 'jpeg' = 'png', filename?: string) {
 		path = this.escape(path);
 		console.log('[FileManager]: Saving file at %s ...', path);
 		try {
-			fs.writeFileSync(path, file);
+			filename = filename === undefined ? this.generateString(8) : filename
+			while (this.fileExists(path + filename)) {
+				filename = this.generateString(8);
+			}
+			fs.writeFileSync(path + filename + '.' + ext, this.decodeBase64Image(file).data);
+			return filename + '.' + ext;
 		} catch (err) {
-			throw new FileIOError(`Error saving file at ${path}`, 'FileManager');
+			const error = new FileIOError(`Error saving file at ${path}`, 'FileManager');
+			console.error(error + ':' + err);
+			throw error;
+		}
+	}
+
+	public saveIntoUser(user_id: string, file: string, ext: 'png' | 'jpeg' = 'png', filename?: string) {
+		const path = this.getUserImagePath(user_id);
+		//create the path if it does not exist
+		try {
+			console.log('[FileManager]: Check if %s exists', path)
+			this.createFullPath(path);
+			return this.saveFile(path, file, ext, filename);
+		}
+		catch (err) {
+			const error = new FileIOError(`Error saving file at ${path}`, 'FileManager');
+			console.error(error + ':' + err);
+			throw error;
+		}
+	}
+
+	public loadFromUser(user_id: string, filename: string) {
+		const path = this.getUserImagePath(user_id);
+		try {
+			return this.loadFile(path + filename);
+		}
+		catch (err) {
+			const error = new FileIOError(`Error loading file at ${path}`, 'FileManager');
+			console.error(error + ':' + err);
+			throw error;
 		}
 	}
 
@@ -65,10 +100,53 @@ export class FileManager {
 		return this.userImagePath.replace('%s', user_id);
 	}
 
+	private createFullPath(path: string) {
+		const parts = path.split('/');
+		let current = '';
+		try {
+			parts.forEach(part => {
+				current += part + '/';
+				if (!fs.existsSync(current)) {
+					fs.mkdirSync(current);
+				}
+			});
+		}
+		catch (err) {
+			const error = new FileIOError(`Error creating path at ${path}`, 'FileManager');
+			console.error(error + ':' + err);
+			throw error;
+		}
+	}
+
+	private fileExists(path: string) {
+		return fs.existsSync(path);
+	}
+
+	private generateString(length: number) {
+		let result = '';
+		const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+		const charactersLength = characters.length;
+		for (let i = 0; i < length; i++) {
+			result += characters.charAt(Math.floor(Math.random() * charactersLength));
+		}
+		return result;
+	}
+
 	private createPathIfDoesNotExist(path: string) {
 		if (!fs.existsSync(path)) {
 			fs.mkdirSync(path);
 		}
+	}
+
+	private decodeBase64Image(dataString: string) {
+		const matches = dataString.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+		if (matches === null || matches.length !== 3) {
+			throw new FileIOError('Invalid input string', 'FileManager');
+		}
+		return {
+			type: matches[1],
+			data: Buffer.from(matches[2], 'base64')
+		};
 	}
 
 
