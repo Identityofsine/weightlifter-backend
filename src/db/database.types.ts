@@ -20,6 +20,7 @@ export namespace DatabaseTypes {
 		image_id: number;
 		user_id: number;
 		filename: string;
+		created_at: string;
 	}
 
 	export type Exercise = {

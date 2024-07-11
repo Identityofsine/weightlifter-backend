@@ -21,7 +21,8 @@ CREATE TABLE `user` (
 CREATE TABLE `image` (
 	`image_id` integer PRIMARY KEY NOT NULL AUTO_INCREMENT,
 	`user_id` integer NOT NULL, -- owner
-	`filename` VARCHAR(1024) NOT NULL
+	`filename` VARCHAR(1024) NOT NULL,
+	`created_at` timestamp DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE `workout` (

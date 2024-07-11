@@ -36,4 +36,9 @@ export namespace RouteTypes {
 		metric: string;
 	}[]
 
+	export type Image = {
+		path: string;
+		date: string;
+	}
+
 }

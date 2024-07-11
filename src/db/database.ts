@@ -210,7 +210,43 @@ export default class Database {
 			if (err instanceof DatabaseError) {
 				throw err;
 			}
-			return { image_id: -1, user_id: -1, filename: '' };
+			return { image_id: -1, user_id: -1, filename: '', created_at: '' };
+		}
+	}
+
+	public async getImages(user_id: string): Promise<DatabaseTypes.Image[]> {
+		try {
+			if (!user_id) {
+				throw new DatabaseIOError('No user_id provided', 'database.ts::getImages');
+			}
+			user_id = await this.escape(user_id) as string;
+			const user_exists = await this.atleastOne(`SELECT * FROM user WHERE user_id = ${user_id}`);
+			if (!user_exists) {
+				throw new NotFoundError('User not found', 'database.ts::getImages');
+			}
+			const images = await this.query<DatabaseTypes.Image[]>(`SELECT * FROM image WHERE user_id = ${user_id} AND image_id != (SELECT pfp_id FROM user WHERE user_id = ${user_id})`);
+			return images;
+		} catch (err: any) {
+			return [];
+		}
+	}
+
+	public async addImage(user_id: string, filename: string): Promise<DatabaseTypes.Image> {
+		try {
+			user_id = await this.escape(user_id) as string;
+			filename = await this.escape(filename) as string;
+			const user_exists = await this.atleastOne(`SELECT * FROM user WHERE user_id = ${user_id}`);
+			if (!user_exists) {
+				throw new NotFoundError('User not found', 'database.ts::addImage');
+			}
+			await this.query(`INSERT INTO image (user_id, filename) VALUES (${user_id}, ${filename})`);
+			const image = await this.query<DatabaseTypes.Image[]>(`SELECT * FROM image WHERE user_id = ${user_id} AND filename = ${filename}`);
+			return image[0];
+		} catch (err: any) {
+			if (err instanceof DatabaseError) {
+				throw err;
+			}
+			throw new DatabaseError(500, 'Error adding image', 'database.ts::addImage');
 		}
 	}
 
