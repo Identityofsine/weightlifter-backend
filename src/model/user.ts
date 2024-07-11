@@ -6,11 +6,13 @@ class User implements Omit<User> {
 	public readonly user_id: number;
 	public readonly username: string;
 	public readonly name: string;
+	public readonly pfp?: string;
 	private exercises: Exercise[] = [];
-	constructor(user_id: number, username: string, name: string) {
+	constructor(user_id: number, username: string, name: string, pfp?: string) {
 		this.user_id = user_id;
 		this.username = username;
 		this.name = name;
+		this.pfp = pfp;
 	}
 
 	addExercise(exercise: Exercise) {
@@ -45,7 +47,7 @@ class User implements Omit<User> {
 	}
 
 	public static fromDatabase(data: DatabaseTypes.User): User {
-		return new User(data.user_id, data.username, data.name);
+		return new User(data.user_id, data.username, data.name, data.pfp);
 	}
 
 	public omit() {
@@ -53,6 +55,7 @@ class User implements Omit<User> {
 			user_id: this.user_id,
 			username: this.username,
 			name: this.name,
+			pfp: this.pfp,
 			exercises: this.exercises.map(exercise => exercise.omit_alt())
 		};
 	}

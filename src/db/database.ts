@@ -7,6 +7,7 @@ import { formatToMySQLDateTime, formatToMySQLTime, mysqlDatetimeToDate, randomiz
 import Exercise from '../model/exercise';
 import { Workout, WorkoutInstances } from '../model/workout';
 import User from '../model/user';
+import WeightLifterSettings from '../../settings';
 
 export default class Database {
 	private static instance: Database;
@@ -123,7 +124,7 @@ export default class Database {
 			if (err instanceof DatabaseError) {
 				throw err;
 			}
-			return { user_id: -1, username: '', password: '', name: '', nfc_key: '', permission: 0, pfp_id: -1 };
+			return { user_id: -1, username: '', password: '', name: '', nfc_key: '', permission: 0, pfp_id: -1, pfp: '' };
 		}
 	}
 
@@ -141,7 +142,7 @@ export default class Database {
 			if (err instanceof NotFoundError) {
 				throw err;
 			}
-			return { user_id: -1, username: '', password: '', name: '', nfc_key: '', permission: 0, pfp_id: -1 };
+			return { user_id: -1, username: '', password: '', name: '', nfc_key: '', permission: 0, pfp_id: -1, pfp: '' };
 		}
 	}
 
@@ -158,13 +159,14 @@ export default class Database {
 			if (!user || user.length === 0) {
 				throw new NotFoundError('User not found', 'database.ts::getUserById');
 			}
+			user[0].pfp = `${WeightLifterSettings.webPath}/v1/file/pfp?user_id=${user_id}`;
 			return user?.[0];
 		}
 		catch (err: any) {
 			if (err instanceof DatabaseError) {
 				throw err;
 			}
-			return { user_id: -1, username: '', password: '', name: "", nfc_key: '', permission: 0, pfp_id: -1 };
+			return { user_id: -1, username: '', password: '', name: "", nfc_key: '', permission: 0, pfp_id: -1, pfp: '' };
 		}
 	}
 
@@ -192,12 +194,13 @@ export default class Database {
 
 	public async getPFP(user_id: string): Promise<DatabaseTypes.Image> {
 		try {
+			const o_uid = user_id;
 			user_id = await this.escape(user_id) as string;
 			const user_exists = await this.atleastOne(`SELECT * FROM user WHERE user_id = ${user_id}`);
 			if (!user_exists) {
 				throw new NotFoundError('User not found', 'database.ts::getPFP');
 			}
-			const user = await this.getUserById(parseInt(user_id));
+			const user = await this.getUserById(parseInt(o_uid));
 			const pfp = await this.query<DatabaseTypes.Image[]>(`SELECT * FROM image WHERE image_id = ${user.pfp_id}`);
 			if (!pfp || pfp.length === 0) {
 				throw new NotFoundError('PFP not found', 'database.ts::getPFP');
@@ -207,7 +210,7 @@ export default class Database {
 			if (err instanceof DatabaseError) {
 				throw err;
 			}
-			return { image_id: -1, user_id: -1, file_id: '' };
+			return { image_id: -1, user_id: -1, filename: '' };
 		}
 	}
 
@@ -239,6 +242,7 @@ export default class Database {
 				if (user[0].nfc_key !== nfc) {
 					throw new AuthenticationError('Incorrect nfc', 'database.ts::authenticateUser');
 				}
+				user[0].pfp = `${WeightLifterSettings.webPath}/v1/file/pfp?user_id=${user[0].user_id}`;
 				return user[0];
 			} else {
 				throw new DatabaseError(400, 'No authentication method provided', 'database.ts::authenticateUser');
@@ -257,10 +261,16 @@ export default class Database {
 		}
 		try {
 			const user_statement = `SELECT * FROM user WHERE ${user_ids.map((id) => `user_id = ${id}`).join(' OR ')}`;
-			const user_query = await this.query<DatabaseTypes.User[]>(user_statement);
+			let user_query = await this.query<DatabaseTypes.User[]>(user_statement);
 			if (!user_query || user_query.length === 0 || user_query.length !== user_ids.length) {
 				throw new NotFoundError('Mismatch between Found Users and Users Provided', 'database.ts::getUsersByIDs');
 			}
+			user_query = user_query.map((user) => {
+				return {
+					...user,
+					pfp: `${WeightLifterSettings.webPath}/v1/file/pfp?user_id=${user.user_id}`
+				}
+			});
 			return user_query;
 		}
 		catch (err: any) {

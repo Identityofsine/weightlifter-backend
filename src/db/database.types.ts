@@ -7,6 +7,7 @@ export namespace DatabaseTypes {
 		nfc_key: string;
 		permission: number;
 		pfp_id: number;
+		pfp: string
 	}
 
 	export type UserToken = {
@@ -18,7 +19,7 @@ export namespace DatabaseTypes {
 	export type Image = {
 		image_id: number;
 		user_id: number;
-		file_id: string;
+		filename: string;
 	}
 
 	export type Exercise = {

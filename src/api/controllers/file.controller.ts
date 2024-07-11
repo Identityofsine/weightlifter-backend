@@ -45,7 +45,7 @@ export namespace FileController {
 			if (!user_exists) {
 				return res.status(400).json({ status: 400, message: 'User not found', success: false });
 			}
-			const file_id = user_exists.pfp_id;
+			const file_id = (await db.getPFP(user_id)).filename;
 			const path = fm.getUserImagePath(user_id);
 			const file = fm.loadFile(path + file_id);
 			if (!file) {
