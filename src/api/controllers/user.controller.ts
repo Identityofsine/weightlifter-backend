@@ -52,7 +52,7 @@ export namespace UserController {
 			if (!user_id || !pfp) {
 				throw new RouteIOError('User ID or PFP not provided', 'user.controller.ts::setPFP');
 			}
-			const file_id = FileManager.getInstance().saveIntoUser(user_id, pfp, 'png');
+			const file_id = await FileManager.getInstance().saveIntoUser(user_id, pfp, 'png');
 			await db.setPFP(user_id, file_id);
 			return res.status(200).json({ status: 200, message: 'PFP set successfully', success: true, file_id });
 		} catch (err: any) {

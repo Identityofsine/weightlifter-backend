@@ -41,13 +41,19 @@ export default class Database {
 		return this._connection;
 	}
 
-	private async escape(str: String): Promise<String> {
+	private async escape(str: string): Promise<string> {
+		const TIMEOUT = 2500;
 		return new Promise((resolve, reject) => {
+			const timeout = setTimeout(() => {
+				reject(new DatabaseError(500, 'Error in connection [timeout]', 'database.ts::escape'));
+			}, TIMEOUT);
 			this.connection.getConnection((err, con) => {
 				if (err || !con) {
 					reject(new DatabaseError(500, 'Error in connection [' + err?.errno + ']', 'database.ts::escape'));
 					return;
 				} else {
+					con.release();
+					clearTimeout(timeout);
 					resolve(con.escape(str));
 				}
 			});
@@ -55,12 +61,17 @@ export default class Database {
 	}
 
 	private async query<T extends any>(query: string): Promise<T> {
+		const TIMEOUT = 2500;
 		const response = await new Promise((resolve, reject) => {
+			const timeout = setTimeout(() => {
+				reject(new DatabaseError(500, 'Error in connection [timeout]', 'database.ts::query'));
+			}, TIMEOUT);
 			this.connection.getConnection((err, con) => {
 				if (err || !con) {
 					reject(new DatabaseError(500, 'Error in connection [' + err?.errno + ']', 'database.ts::query'));
 					return;
 				} else {
+					clearTimeout(timeout);
 					//reduce chance of sql injection
 					con.query(query, (err, results, fields) => {
 						if (err) {
@@ -214,12 +225,11 @@ export default class Database {
 		}
 	}
 
-	public async getImages(user_id: string): Promise<DatabaseTypes.Image[]> {
+	public async getImages(user_id: number): Promise<DatabaseTypes.Image[]> {
 		try {
 			if (!user_id) {
 				throw new DatabaseIOError('No user_id provided', 'database.ts::getImages');
 			}
-			user_id = await this.escape(user_id) as string;
 			const user_exists = await this.atleastOne(`SELECT * FROM user WHERE user_id = ${user_id}`);
 			if (!user_exists) {
 				throw new NotFoundError('User not found', 'database.ts::getImages');
