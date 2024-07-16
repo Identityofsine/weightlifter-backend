@@ -8,6 +8,7 @@ import Exercise from '../model/exercise';
 import { Workout, WorkoutInstances } from '../model/workout';
 import User from '../model/user';
 import WeightLifterSettings from '../../settings';
+import { flatten, sectionArray } from '../util/section';
 
 export default class Database {
 	private static instance: Database;
@@ -666,69 +667,113 @@ export default class Database {
 				value: number;
 			}
 
-			//theoretical maxes
-			let orp_max: max[] = []; //1rm
-			let frp_max: max[] = []; //5rm
-			let twp_max: max[] = []; //12rm
+			//calculate maxes of given exercise	
 			for (let i = 0; i < exercises.length; i++) {
-				const exercise = exercises[i];
-				const reps = exercise.reps;
-				const weight = exercise.weight;
-				const orp = calc_max(reps, weight);
-				const frp = Math.floor(orp * 0.88);
-				const twp = Math.floor(orp * 0.70);
-
-				const orp_max_idx = orp_max.findIndex((max) => max.exercise_id === exercise.exercise_id);
-				const frp_max_idx = frp_max.findIndex((max) => max.exercise_id === exercise.exercise_id);
-				const twp_max_idx = twp_max.findIndex((max) => max.exercise_id === exercise.exercise_id);
-				if (orp_max_idx === -1) orp_max.push({ exercise_id: exercise.exercise_id, value: orp });
-				else if (orp > orp_max[orp_max_idx].value) orp_max[orp_max_idx].value = orp;
-				if (frp_max_idx === -1) frp_max.push({ exercise_id: exercise.exercise_id, value: frp });
-				else if (frp > frp_max[frp_max_idx].value) frp_max[frp_max_idx].value = frp;
-				if (twp_max_idx === -1) twp_max.push({ exercise_id: exercise.exercise_id, value: twp });
-				else if (twp > twp_max[twp_max_idx].value) twp_max[twp_max_idx].value = twp;
-
-
-				exercises[i] = {
-					...exercises[i],
-					max: {
-						one_rep: orp,
-						five_rep: frp,
-						twelve_rep: twp,
-						therotical_one_rep: 0,
-						therotical_five_rep: 0,
-						thertical_twelve_rep: 0,
-					}
+				let exercise = exercises[i]; //needs to be mutable
+				let one_rep = 0, five_rep = 0, twelve_rep = 0, therotical_one_rep = 0, therotical_five_rep = 0, thertical_twelve_rep = 0;
+				one_rep = exercise.reps == 1 ? exercise.weight : 0;
+				five_rep = exercise.reps == 5 ? exercise.weight : 0;
+				twelve_rep = exercise.reps == 12 ? exercise.weight : 0;
+				therotical_one_rep = calc_max(exercise.reps, exercise.weight);
+				therotical_five_rep = Math.round(therotical_one_rep * 0.85);
+				thertical_twelve_rep = Math.round(therotical_one_rep * 0.7);
+				exercise.max = {
+					one_rep,
+					five_rep,
+					twelve_rep,
+					therotical_one_rep,
+					therotical_five_rep,
+					thertical_twelve_rep
 				}
 			}
 
-			//update the maxes
-			for (let i = 0; i < exercises.length; i++) {
-				const exercise = exercises[i];
-				const orp_max_idx = orp_max.findIndex((max) => max.exercise_id === exercise.exercise_id);
-				const frp_max_idx = frp_max.findIndex((max) => max.exercise_id === exercise.exercise_id);
-				const twp_max_idx = twp_max.findIndex((max) => max.exercise_id === exercise.exercise_id);
-				if (orp_max_idx !== -1 && frp_max_idx !== -1 && twp_max_idx !== -1)
-					exercise.max = {
-						...exercise.max,
-						therotical_one_rep: orp_max[orp_max_idx].value,
-						therotical_five_rep: frp_max[frp_max_idx].value,
-						thertical_twelve_rep: twp_max[twp_max_idx].value,
-					};
-				else {
-					throw new DatabaseIOError('Error calculating maxes', 'database.ts::getExercisesByUser');
-				}
-			}
+			const sections = sectionArray<DatabaseTypes.ExerciseLog & ExerciseMaxes>(exercises, (e) => e.exercise_id);
+			sections.forEach(async (section) => {
+				const max = await this.reduceMaxes(section);
+				section.forEach((exercise) => {
+					exercise.max = max.max;
+				})
+			})
 
-
-			return exercises;
+			return flatten(sections) as (DatabaseTypes.ExerciseLog & ExerciseMaxes)[];
 		} catch (err: any) {
 			console.log(err);
 			throw new DatabaseError(500, 'Error getting exercises by user', 'database.ts::getExercisesByUser');
 		}
 	}
 
+	private async reduceMaxes(exercises: (ExerciseMaxes)[]): Promise<ExerciseMaxes> {
+		try {
+			if (!exercises) {
+				throw new DatabaseIOError('Invalid exercises', 'database.ts::reduceMaxes');
+			}
+
+			const max = exercises.reduce((acc, e) => {
+				if (e.max.one_rep > acc.max.one_rep) return e;
+				return acc;
+			});
+			const max_t = exercises.reduce((acc, e) => {
+				if (e.max.therotical_one_rep > acc.max.therotical_one_rep) return e;
+				return acc;
+			});
+			const five_rep = exercises.reduce((acc, e) => {
+				if (e.max.five_rep > acc.max.five_rep) return e;
+				return acc;
+			});
+			const five_rep_t = exercises.reduce((acc, e) => {
+				if (e.max.therotical_five_rep > acc.max.therotical_five_rep) return e;
+				return acc;
+			});
+			const twelve_rep = exercises.reduce((acc, e) => {
+				if (e.max.twelve_rep > acc.max.twelve_rep) return e;
+				return acc;
+			});
+			const twelve_rep_t = exercises.reduce((acc, e) => {
+				if (e.max.thertical_twelve_rep > acc.max.thertical_twelve_rep) return e;
+				return acc;
+			});
+
+			return {
+				max: {
+					one_rep: max.max.one_rep,
+					five_rep: five_rep.max.five_rep,
+					twelve_rep: twelve_rep.max.twelve_rep,
+					therotical_one_rep: max_t.max.therotical_one_rep,
+					therotical_five_rep: five_rep_t.max.therotical_five_rep,
+					thertical_twelve_rep: twelve_rep_t.max.thertical_twelve_rep,
+				},
+			}
+
+		} catch (err: any) {
+			if (err instanceof DatabaseError) {
+				throw err;
+			}
+			throw new DatabaseError(500, 'Error reducing maxes', 'database.ts::reduceMaxes');
+		}
+	}
+
 	//analytics
+	//
+	public async getExerciseAnalytics(user_id: number, exercise_id: number): Promise<ExerciseMaxes> {
+		try {
+			if (!user_id || user_id < 0 || !exercise_id || exercise_id < 0) {
+				throw new DatabaseIOError('Invalid user_id or exercise_id', 'database.ts::getExerciseAnalytics');
+			}
+			const exercises = (await this.getExercisesByUser(user_id)).filter((exercise) => exercise.exercise_id == exercise_id);
+			if (exercises.length === 0) {
+				throw new NotFoundError('Exercise not found', 'database.ts::getExerciseAnalytics');
+			}
+
+			return await this.reduceMaxes(exercises);
+
+		} catch (e: any) {
+			if (e instanceof DatabaseError) {
+				throw e;
+			} else {
+				throw new DatabaseError(500, 'Error getting exercise analytics', 'database.ts::getExerciseAnalytics');
+			}
+		}
+	}
 
 	public async getAvailableTrackables(user_id: number): Promise<RouteTypes.TrackableMetric[]> {
 		try {
@@ -836,7 +881,6 @@ export default class Database {
 		}
 	}
 }
-
 
 
 type ExerciseMaxes = {

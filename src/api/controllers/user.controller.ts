@@ -153,4 +153,18 @@ export namespace UserController {
 		}
 	}
 
+	export async function getExerciseAnalytics(req: Request, res: Response) {
+		try {
+			const user_id = req.query['user_id'] as any as number;
+			const exercise_id = req.query['exercise_id'] as any as number;
+			if (!user_id || isNaN(user_id) || !exercise_id || isNaN(exercise_id)) {
+				throw new RouteIOError('User ID or Exercise ID missing', 'user.controller.ts::getExerciseAnalytics');
+			}
+			const response = await db.getExerciseAnalytics(user_id, exercise_id);
+			return res.status(200).json({ status: 200, message: 'Returned Analytics', success: true, analytics: response });
+		} catch (err: any) {
+			returnError(res, err);
+		}
+	}
+
 }
