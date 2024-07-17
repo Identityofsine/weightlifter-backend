@@ -9,6 +9,7 @@ import { Workout, WorkoutInstances } from '../model/workout';
 import User from '../model/user';
 import WeightLifterSettings from '../../settings';
 import { flatten, sectionArray } from '../util/section';
+import { Logger } from '../util/logger';
 
 export default class Database {
 	private static instance: Database;
@@ -806,69 +807,83 @@ export default class Database {
 
 	public async getDataSet(user_id: number, id: string, type: 'exercise' | 'measurement') {
 
-		type T = { [key: string]: any, date: string }
-		function shouldNarrow(a: T, b: T) {
-			if (!a.date || !b.date) return 0;
+		//this just sucks 
+		type I = { date: string }
+		function dayExists<Z extends I>(a: Z, b: RouteTypes.Dataset, callback: (a: Z, b: RouteTypes.Data, idx: number) => void) {
+			if (!a.date || !b) {
+				Logger.log('Invalid date', 'database.ts::getDataSet');
+				return false;
+			}
 			const date_a = new Date(a.date);
-			const date_b = new Date(b.date);
-			if (!date_a || !date_b) return 0;
-			//check if the same
-			if (date_a.getDay() === date_b.getDay() && date_a.getMonth() == date_b.getMonth() && date_a.getDate() == date_b.getDate() && date_a.getFullYear() == date_b.getFullYear())
-				return 0;
-			return 1;
+			if (!date_a) {
+				Logger.log('Invalid date', 'database.ts::getDataSet');
+				return false;
+			}
+			let result = false;
+			b.forEach((obj, idx) => {
+				//check if the same
+				const date_b = new Date(obj.date);
+				if (date_a.getDay() == date_b.getDay() && date_a.getMonth() == date_b.getMonth() && date_a.getDate() == date_b.getDate() && date_a.getFullYear() == date_b.getFullYear()) {
+					callback(a, obj, idx);
+					result = true;
+				}
+			})
+			return result;
 		}
 
 		try {
 			if (type === 'exercise') {
 				let exercises = await this.getExercisesByUser(user_id);
-				exercises = exercises.filter((exercise) => exercise.exercise_id === parseInt(id));
-				for (let i = 0; i < exercises.length - 1; i++) {
+				exercises = exercises.filter((exercise) => exercise.exercise_id === parseInt(id) && exercise.date !== '');
+				let exercise_list: RouteTypes.Dataset = [];
+				for (let i = 0; i < exercises.length; i++) {
 					const exercise_a = exercises[i];
-					const exercise_b = exercises[i + 1];
-					if (shouldNarrow(exercise_a, exercise_b) === 0) {
-						//check the greatest
-						if (exercise_a.weight < exercise_b.weight) {
-							exercises.splice(i, 1);
+					if (exercise_a.reps === 0 || exercise_a.weight === 0) {
+						Logger.log(`Invalid exercise for ${exercise_a.name} (User: ${user_id})`, 'database.ts::getDataSet');
+						continue;
+					}
+					const exists = dayExists<DatabaseTypes.ExerciseLog>(exercise_a, exercise_list, (a, b, idx) => {
+						if (a.weight > b.value) {
+							exercise_list[idx] = {
+								date: a.date,
+								value: a.weight,
+								metric: 'lbs'
+							};
 						} else {
-							exercises.splice(i + 1, 1);
+							exercise_list[idx] = b;
 						}
-						i--;
+					});
+					if (!exists) {
+						exercise_list.push({ date: exercise_a.date, value: exercise_a.weight, metric: 'lbs' });
 					}
 				}
-				if (exercises.length === 0) return [];
-				const e = exercises.map((exercise) => { return { date: exercise.date, value: exercise.weight, metric: 'lbs' } });
-				exercises = exercises.filter((exercise) => exercise.date !== '');
-				return e;
+				return exercise_list.sort((a, b) => { return new Date(a.date).getTime() - new Date(b.date).getTime() });
 			} else if (type === 'measurement') {
 				let measurements = await this.getMeasurements(user_id);
 				let measurement_list: RouteTypes.Dataset = [];
-				measurement_list = measurements.map((obj) => {
-					const measurement_keys = Object.keys(obj);
-					for (let i = 0; i < measurement_keys.length; i++) {
-						const key = measurement_keys[i];
-						//@ts-ignore
-						const value = obj[key];
-						if (key === id && value !== null) {
-							return { date: obj.date, value: value as number, metric: 'in' };
-						}
+				const key = id as string as keyof DatabaseTypes.Measurement;
+				for (let i = 0; i < measurements.length; i++) {
+					const measurement_a = measurements[i];
+					if (!measurement_a[key] || isNaN(measurement_a[key] as any)) {
+						Logger.log(`Invalid measurement for ${key} (User: ${user_id})`, 'database.ts::getDataSet');
+						continue;
+					} else if (measurement_a[key] === 0) {
+						Logger.log(`Invalid measurement for ${key} (User: ${user_id}): Given Value 0`, 'database.ts::getDataSet');
+						continue;
 					}
-					return { date: '', value: 0, metric: 'in' };
-				})
-				measurement_list = measurement_list.filter((measurement) => measurement.date !== '');
-				if (measurement_list.length === 0) return [];
-				for (let i = 0; i < measurement_list.length - 1; i++) {
-					const measurement_a = measurement_list[i];
-					const measurement_b = measurement_list[i + 1];
-					if (shouldNarrow(measurement_a, measurement_b) === 0) {
-						//get newest 
-						const date_a = new Date(measurement_a.date);
-						const date_b = new Date(measurement_b.date);
-						if (date_a.getTime() < date_b.getTime()) {
-							measurement_list.splice(i, 1);
+					const exists = dayExists<DatabaseTypes.Measurement>(measurement_a, measurement_list, (a, b, idx) => {
+						if (a[key] as number > b.value) {
+							measurement_list[idx] = b;
 						} else {
-							measurement_list.splice(i + 1, 1);
+							measurement_list[idx] = {
+								date: a.date,
+								value: a[key] as number,
+								metric: 'lbs' //TODO: change this to the correct metric depending on the key
+							};
 						}
-						i--;
+					});
+					if (!exists) {
+						measurement_list.push({ date: measurement_a.date, value: measurement_a[key] as number, metric: 'lbs' });
 					}
 				}
 				return measurement_list.reverse();

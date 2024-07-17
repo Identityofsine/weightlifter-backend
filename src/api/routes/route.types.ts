@@ -30,11 +30,13 @@ export namespace RouteTypes {
 		type: 'measurement' | 'exercise';
 	}
 
-	export type Dataset = {
+	export type Data = {
 		date: string;
 		value: number;
 		metric: string;
-	}[]
+	}
+
+	export type Dataset = Data[]
 
 	export type Image = {
 		path: string;
