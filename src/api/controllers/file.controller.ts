@@ -105,7 +105,7 @@ export namespace FileController {
 			if (!user_exists) {
 				return res.status(400).json({ status: 400, message: 'User not found', success: false });
 			}
-			const filename = await fm.saveIntoUser(user_id, file);
+			const filename = fm.saveIntoUser(user_id, file);
 			const image = await db.addImage(user_id, filename);
 			return res.status(200).json({ status: 200, message: 'File saved', success: true, image: image });
 		} catch (err: any) {

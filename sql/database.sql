@@ -118,7 +118,7 @@ ALTER TABLE `image` ADD FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`);
 
 -- demo data
 
-INSERT INTO `user` (`username`, `password`, `name`, `permission`) VALUES ('root', 'root', 'Kevin', 4);
+INSERT INTO `user` (`username`, `password`, `name`, `permission`, `nfc_key`) VALUES ('root', 'root', 'Kevin', 4, 'root');
 
 INSERT INTO `workout` (`name`) VALUES ('Chest Day'), ('Leg Day'), ('Back Day'), ('Shoulder Day'), ('Arm Day');
 
